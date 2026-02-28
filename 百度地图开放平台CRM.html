@@ -10283,10 +10283,9 @@
                     // 延迟执行以确保DOM已渲染
                     setTimeout(() => {
                         initIndustryPieChart();
+                        initIndustryFeedback();
                         initScenarioBarChart();
-                        initSatisfactionGauge();
-                        initPositiveFeedbackTags();
-                        initNegativeFeedbackTags();
+                        initScenarioFeedback();
                         initUserQuestionsChart();
                         initCompetitorMentionsChart();
                         initCompetitorComparisonCards();
@@ -10308,16 +10307,16 @@
                     '智能制造', '文化娱乐'
                 ];
                 
-                // 生成随机数据（确保总和为100）
+                // 生成随机数据（确保总和为100，且都是整数）
                 const generateRandomData = () => {
                     let values = [];
                     let remaining = 100;
                     for (let i = 0; i < 9; i++) {
-                        const value = Math.random() * (remaining / (10 - i)) * 1.5;
-                        values.push(parseFloat(value.toFixed(1)));
+                        const value = Math.floor(Math.random() * (remaining / (10 - i)) * 1.5);
+                        values.push(value);
                         remaining -= values[i];
                     }
-                    values.push(parseFloat(remaining.toFixed(1)));
+                    values.push(remaining);
                     return values;
                 };
                 
@@ -10384,193 +10383,455 @@
                 };
                 myChart.setOption(option);
                 
-                // 响应式调整
                 window.addEventListener('resize', () => myChart.resize());
             };
 
-            // 总体满意度仪表盘
-            const initSatisfactionGauge = () => {
-                const chartDom = document.getElementById('satisfactionGauge');
-                if (!chartDom) return;
+            // 行业反馈 - 行业列表和负面反馈联动
+            const initIndustryFeedback = () => {
+                const container = document.getElementById('industryFeedback');
+                if (!container) return;
                 
-                const myChart = echarts.init(chartDom);
+                // 15个行业
+                const industries = [
+                    '物流运输', '餐饮外卖', '房地产', '交通出行', 
+                    '教育培训', '医疗健康', '金融服务', '零售电商', 
+                    '智能制造', '文化娱乐', '旅游酒店', '汽车服务',
+                    '政务民生', '农业科技', '体育健身'
+                ];
                 
-                // 随机生成满意度分数 (60-100)
-                const satisfactionScore = Math.floor(Math.random() * 40) + 60;
-                
-                const option = {
-                    series: [
-                        {
-                            type: 'gauge',
-                            startAngle: 180,
-                            endAngle: 0,
-                            min: 0,
-                            max: 100,
-                            splitNumber: 10,
-                            radius: '85%',
-                            center: ['50%', '70%'],
-                            axisLine: {
-                                lineStyle: {
-                                    width: 20,
-                                    color: [
-                                        [0.6, '#ff6b6b'],
-                                        [0.8, '#feca57'],
-                                        [1, '#48dbfb']
-                                    ]
-                                }
-                            },
-                            pointer: {
-                                itemStyle: {
-                                    color: '#1890ff',
-                                    shadowColor: 'rgba(0, 0, 0, 0.3)',
-                                    shadowBlur: 8
-                                },
-                                width: 8,
-                                length: '60%'
-                            },
-                            axisTick: {
-                                distance: -20,
-                                length: 6,
-                                lineStyle: {
-                                    color: '#fff',
-                                    width: 1
-                                }
-                            },
-                            splitLine: {
-                                distance: -20,
-                                length: 12,
-                                lineStyle: {
-                                    color: '#fff',
-                                    width: 2
-                                }
-                            },
-                            axisLabel: {
-                                distance: -38,
-                                color: '#666',
-                                fontSize: 11
-                            },
-                            detail: {
-                                valueAnimation: true,
-                                formatter: '{value}分',
-                                color: '#262626',
-                                fontSize: 28,
-                                fontWeight: 'bold',
-                                offsetCenter: [0, '-10%']
-                            },
-                            title: {
-                                show: true,
-                                offsetCenter: [0, '30%'],
-                                fontSize: 14,
-                                color: '#8c8c8c'
-                            },
-                            data: [
-                                {
-                                    value: satisfactionScore,
-                                    name: '总体满意度'
-                                }
-                            ]
-                        }
+                // 每个行业对应的正面反馈数据
+                const industryPositiveFeedbacks = {
+                    '物流运输': [
+                        { name: '路径规划算法准确', value: 45 },
+                        { name: '实时路况更新及时', value: 38 },
+                        { name: '批量接口性能优秀', value: 32 },
+                        { name: '配送范围计算精准', value: 28 },
+                        { name: 'API稳定性高', value: 24 }
+                    ],
+                    '餐饮外卖': [
+                        { name: '门店POI数据丰富', value: 42 },
+                        { name: '定位响应速度快', value: 36 },
+                        { name: '配送导航准确', value: 31 },
+                        { name: '地图加载流畅', value: 27 },
+                        { name: '商圈覆盖全面', value: 22 }
+                    ],
+                    '房地产': [
+                        { name: '周边配套信息详细', value: 40 },
+                        { name: '小区边界标注准确', value: 35 },
+                        { name: '楼盘数据更新及时', value: 29 },
+                        { name: '学区范围清晰', value: 25 },
+                        { name: '交通便利度展示好', value: 21 }
+                    ],
+                    '交通出行': [
+                        { name: '实时路况准确', value: 48 },
+                        { name: '路线规划合理', value: 41 },
+                        { name: '公交地铁信息全', value: 34 },
+                        { name: '避堵功能有效', value: 28 },
+                        { name: '停车场数据丰富', value: 23 }
+                    ],
+                    '教育培训': [
+                        { name: '校园地图详细', value: 37 },
+                        { name: '周边机构信息全', value: 32 },
+                        { name: '导航定位准确', value: 28 },
+                        { name: '教育资源标注清晰', value: 24 },
+                        { name: 'API易于集成', value: 20 }
+                    ],
+                    '医疗健康': [
+                        { name: '医院信息准确', value: 43 },
+                        { name: '急救路线优化好', value: 37 },
+                        { name: '科室位置清晰', value: 30 },
+                        { name: '导航响应快速', value: 26 },
+                        { name: '周边药店覆盖全', value: 22 }
+                    ],
+                    '金融服务': [
+                        { name: '网点分布数据全', value: 39 },
+                        { name: 'ATM位置准确', value: 33 },
+                        { name: '营业时间信息准', value: 28 },
+                        { name: '安全区域标注清晰', value: 24 },
+                        { name: '数据隐私保护好', value: 20 }
+                    ],
+                    '零售电商': [
+                        { name: '配送范围准确', value: 44 },
+                        { name: '门店导航精准', value: 38 },
+                        { name: '商圈热力图清晰', value: 32 },
+                        { name: '客流预测功能好', value: 27 },
+                        { name: '批量地址解析快', value: 23 }
+                    ],
+                    '智能制造': [
+                        { name: '厂区地图定制灵活', value: 36 },
+                        { name: '工业区导航准确', value: 31 },
+                        { name: '设备定位稳定', value: 27 },
+                        { name: '室内导航可用', value: 23 },
+                        { name: '数据接口稳定', value: 19 }
+                    ],
+                    '文化娱乐': [
+                        { name: '景区地图详细', value: 41 },
+                        { name: '游览路线推荐好', value: 35 },
+                        { name: '景点介绍丰富', value: 29 },
+                        { name: 'AR导览体验佳', value: 24 },
+                        { name: '多语言支持完善', value: 20 }
+                    ],
+                    '旅游酒店': [
+                        { name: '酒店位置准确', value: 42 },
+                        { name: '民宿信息丰富', value: 36 },
+                        { name: '景点数据全面', value: 30 },
+                        { name: '旅游路线优质', value: 26 },
+                        { name: '攻略整合度高', value: 22 }
+                    ],
+                    '汽车服务': [
+                        { name: '充电桩信息准确', value: 44 },
+                        { name: '维修店数据全', value: 37 },
+                        { name: '停车导航精准', value: 31 },
+                        { name: '洗车店覆盖广', value: 26 },
+                        { name: '车主服务完善', value: 21 }
+                    ],
+                    '政务民生': [
+                        { name: '政务大厅导航清晰', value: 38 },
+                        { name: '办事窗口标注准确', value: 33 },
+                        { name: '便民服务点全面', value: 28 },
+                        { name: '社区网格划分清晰', value: 24 },
+                        { name: '应急设施标注完善', value: 20 }
+                    ],
+                    '农业科技': [
+                        { name: '农田地块边界准确', value: 35 },
+                        { name: '农机定位稳定', value: 30 },
+                        { name: '农资市场信息全', value: 26 },
+                        { name: '灌溉设施标注清晰', value: 22 },
+                        { name: '气象信息集成好', value: 18 }
+                    ],
+                    '体育健身': [
+                        { name: '健身房位置准确', value: 40 },
+                        { name: '运动场馆信息全', value: 34 },
+                        { name: '跑步路线丰富', value: 29 },
+                        { name: '运动轨迹记录准', value: 25 },
+                        { name: '体育设施覆盖广', value: 21 }
                     ]
                 };
                 
-                myChart.setOption(option);
-                window.addEventListener('resize', () => myChart.resize());
-            };
-
-            // 正面反馈矩阵标签
-            const initPositiveFeedbackTags = () => {
-                const container = document.getElementById('positiveFeedbackTags');
-                if (!container) return;
+                // 每个行业对应的负面反馈数据
+                const industryFeedbacks = {
+                    '物流运输': [
+                        { name: '路径规划偶有绕路', value: 28 },
+                        { name: '批量接口超时问题', value: 22 },
+                        { name: '实时路况更新滞后', value: 18 },
+                        { name: '地址解析不够精准', value: 15 },
+                        { name: 'API并发限制偏低', value: 12 }
+                    ],
+                    '餐饮外卖': [
+                        { name: '室内定位精度待提升', value: 32 },
+                        { name: '偶尔出现定位偏移', value: 25 },
+                        { name: '门店POI信息更新慢', value: 19 },
+                        { name: '地图加载速度偏慢', value: 14 },
+                        { name: '缺少骑手专用导航模式', value: 11 }
+                    ],
+                    '房地产': [
+                        { name: '周边配套数据不够全', value: 27 },
+                        { name: '小区边界不够准确', value: 23 },
+                        { name: '楼盘POI信息缺失', value: 18 },
+                        { name: '学区范围标注不清', value: 16 },
+                        { name: '价格对小团队偏高', value: 13 }
+                    ],
+                    '交通出行': [
+                        { name: '缺少实时路况告警', value: 30 },
+                        { name: '公交到站时间不准', value: 24 },
+                        { name: '地铁换乘方案偏少', value: 20 },
+                        { name: '路径规划偶有绕路', value: 17 },
+                        { name: '停车场信息更新慢', value: 14 }
+                    ],
+                    '教育培训': [
+                        { name: '校园地图覆盖不全', value: 26 },
+                        { name: '教学楼室内导航缺失', value: 21 },
+                        { name: '周边培训机构信息少', value: 17 },
+                        { name: '缺少校车实时追踪功能', value: 15 },
+                        { name: 'API文档部分内容不详细', value: 12 }
+                    ],
+                    '医疗健康': [
+                        { name: '医院室内导航精度低', value: 29 },
+                        { name: '科室位置标注不清', value: 24 },
+                        { name: '急救路线规划不够优', value: 19 },
+                        { name: '医疗机构信息更新慢', value: 16 },
+                        { name: '缺少无障碍路线规划', value: 13 }
+                    ],
+                    '金融服务': [
+                        { name: '网点分布查询不够快', value: 25 },
+                        { name: 'ATM位置信息不全', value: 22 },
+                        { name: '营业时间信息滞后', value: 18 },
+                        { name: '安全区域标注缺失', value: 15 },
+                        { name: '数据隐私保护待加强', value: 11 }
+                    ],
+                    '零售电商': [
+                        { name: '配送范围计算不准', value: 31 },
+                        { name: '门店导航终点偏移', value: 26 },
+                        { name: '商圈热力图更新慢', value: 20 },
+                        { name: '缺少客流预测功能', value: 17 },
+                        { name: '批量地址解析速度慢', value: 12 }
+                    ],
+                    '智能制造': [
+                        { name: '厂区地图定制成本高', value: 28 },
+                        { name: '工业区导航精度不足', value: 23 },
+                        { name: '设备定位刷新频率低', value: 19 },
+                        { name: '缺少室内厂房导航', value: 16 },
+                        { name: '数据接口稳定性待提升', value: 14 }
+                    ],
+                    '文化娱乐': [
+                        { name: '景区地图更新不及时', value: 27 },
+                        { name: '游览路线推荐单一', value: 22 },
+                        { name: '景点介绍信息简略', value: 18 },
+                        { name: '缺少AR实景导览功能', value: 15 },
+                        { name: '多语言支持不够完善', value: 13 },
+                        { name: '演出场馆座位图不清晰', value: 10 },
+                        { name: '文化设施开放时间不准', value: 8 }
+                    ],
+                    '旅游酒店': [
+                        { name: '酒店位置标注偏移', value: 29 },
+                        { name: '民宿信息覆盖不全', value: 24 },
+                        { name: '景点门票价格更新慢', value: 20 },
+                        { name: '旅游路线规划不够优', value: 17 },
+                        { name: '缺少旅行攻略整合', value: 14 },
+                        { name: '酒店周边设施信息少', value: 11 },
+                        { name: '跨境地图数据欠缺', value: 9 }
+                    ],
+                    '汽车服务': [
+                        { name: '充电桩位置信息滞后', value: 31 },
+                        { name: '维修店评价数据少', value: 26 },
+                        { name: '违章查询功能缺失', value: 21 },
+                        { name: '洗车店导航不精准', value: 18 },
+                        { name: '停车费用预估不准', value: 15 },
+                        { name: '车辆年检点信息旧', value: 12 },
+                        { name: '缺少车主社区功能', value: 10 }
+                    ],
+                    '政务民生': [
+                        { name: '政务大厅导航不清晰', value: 28 },
+                        { name: '办事窗口位置标注错', value: 23 },
+                        { name: '缺少排队预约功能', value: 19 },
+                        { name: '便民服务点信息旧', value: 16 },
+                        { name: '社区网格划分不明确', value: 13 },
+                        { name: '应急避难所标注缺失', value: 11 },
+                        { name: '无障碍通道信息少', value: 9 }
+                    ],
+                    '农业科技': [
+                        { name: '农田地块边界不准', value: 26 },
+                        { name: '农机设备定位延迟', value: 22 },
+                        { name: '农资市场信息更新慢', value: 18 },
+                        { name: '灌溉设施分布不全', value: 15 },
+                        { name: '农产品收购点标注少', value: 12 },
+                        { name: '气象信息集成度低', value: 10 },
+                        { name: '农技服务站覆盖不足', value: 8 }
+                    ],
+                    '体育健身': [
+                        { name: '健身房位置更新不及时', value: 30 },
+                        { name: '运动场馆开放时间不准', value: 25 },
+                        { name: '跑步路线规划单调', value: 20 },
+                        { name: '体育设施预约功能弱', value: 17 },
+                        { name: '运动轨迹记录不稳定', value: 14 },
+                        { name: '缺少运动社交功能', value: 11 },
+                        { name: '体育赛事信息缺失', value: 9 }
+                    ]
+                };
                 
-                // 正面反馈短语
-                const positiveFeedbacks = [
-                    '门店POI数据很丰富',
-                    '页面滑动的流畅度很高',
-                    '路线规划算法很准确',
-                    '定位响应速度快',
-                    '地图加载性能优秀',
-                    'API文档清晰易懂',
-                    '技术支持响应及时',
-                    '数据更新频率高',
-                    '界面设计简洁美观',
-                    '功能扩展性强',
-                    '价格合理实惠',
-                    '坐标转换准确',
-                    '批量接口很实用',
-                    '服务稳定可靠',
-                    '多端适配良好'
-                ];
+                // 初始状态：选中第一个行业
+                let selectedIndustry = industries[0];
+                let scrollPositions = {}; // 保存每个行业的滚动位置
                 
-                // 为每个反馈生成随机提及次数 (5-50)
-                const data = positiveFeedbacks.map(name => ({
-                    name: name,
-                    value: Math.floor(Math.random() * 45) + 5
-                }));
-                
-                // 按提及次数排序
-                data.sort((a, b) => b.value - a.value);
-                
-                // 渲染标签矩阵 - 添加固定高度和滚动
-                container.innerHTML = `
-                    <div style="
-                        max-height: 252px;
-                        overflow-y: auto;
-                        overflow-x: hidden;
-                        padding: 8px 12px 8px 0;
-                        scrollbar-width: thin;
-                        scrollbar-color: #b7eb8f #f0f0f0;
-                    ">
-                        <div style="display: flex; flex-wrap: wrap; gap: 8px;">
-                            ${data.map(item => `
-                                <div style="
-                                    display: inline-flex;
-                                    align-items: center;
-                                    gap: 6px;
-                                    padding: 6px 12px;
-                                    background: linear-gradient(135deg, #f6ffed 0%, #d9f7be 100%);
-                                    border: 1px solid #b7eb8f;
-                                    border-radius: 16px;
-                                    font-size: 13px;
-                                    color: #237804;
-                                    transition: all 0.2s;
-                                    cursor: default;
-                                " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 8px rgba(82,196,26,0.2)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none';">
-                                    <span style="font-weight: 500;">${item.name}</span>
-                                    <span style="
-                                        display: inline-flex;
+                // 渲染函数
+                const render = () => {
+                    const positiveFeedbacks = industryPositiveFeedbacks[selectedIndustry];
+                    const feedbacks = industryFeedbacks[selectedIndustry];
+                    
+                    // 保存当前滚动位置
+                    const listContainer = container.querySelector('[data-industry-list]');
+                    const feedbackContainer = container.querySelector('[data-feedback-content]');
+                    if (listContainer && feedbackContainer) {
+                        scrollPositions[selectedIndustry] = {
+                            list: listContainer.scrollTop,
+                            feedback: feedbackContainer.scrollTop
+                        };
+                    }
+                    
+                    container.innerHTML = `
+                        <div style="display: flex; height: 100%; gap: 12px;">
+                            <!-- 左侧行业列表 -->
+                            <div data-industry-list style="
+                                width: 110px;
+                                flex-shrink: 0;
+                                background: #fafafa;
+                                border-radius: 6px;
+                                padding: 8px;
+                                overflow-y: auto;
+                                max-height: 350px;
+                            ">
+                                ${industries.map(industry => `
+                                    <div 
+                                        data-industry="${industry}"
+                                        style="
+                                            padding: 8px 10px;
+                                            margin-bottom: 4px;
+                                            border-radius: 4px;
+                                            font-size: 13px;
+                                            cursor: pointer;
+                                            transition: all 0.2s;
+                                            background: ${industry === selectedIndustry ? '#1890ff' : 'transparent'};
+                                            color: ${industry === selectedIndustry ? '#fff' : '#262626'};
+                                            font-weight: ${industry === selectedIndustry ? '500' : 'normal'};
+                                        "
+                                        onmouseover="if('${industry}' !== '${selectedIndustry}') { this.style.background='#f0f0f0'; }"
+                                        onmouseout="if('${industry}' !== '${selectedIndustry}') { this.style.background='transparent'; }"
+                                    >${industry}</div>
+                                `).join('')}
+                            </div>
+                            
+                            <!-- 右侧反馈标签容器 -->
+                            <div data-feedback-content style="
+                                flex: 1;
+                                overflow-y: auto;
+                                overflow-x: hidden;
+                                padding: 4px 8px 4px 0;
+                                max-height: 350px;
+                            ">
+                                <!-- 正面反馈 -->
+                                <div style="margin-bottom: 16px;">
+                                    <div style="
+                                        font-size: 13px;
+                                        font-weight: 500;
+                                        color: #52c41a;
+                                        margin-bottom: 8px;
+                                        display: flex;
                                         align-items: center;
-                                        justify-content: center;
-                                        min-width: 24px;
-                                        height: 20px;
-                                        padding: 0 6px;
-                                        background: #52c41a;
-                                        color: #fff;
-                                        border-radius: 10px;
-                                        font-size: 11px;
-                                        font-weight: 600;
-                                    ">${item.value}</span>
+                                        gap: 4px;
+                                    ">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#52c41a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                        正面反馈
+                                    </div>
+                                    <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                                        ${positiveFeedbacks.map(item => `
+                                            <div style="
+                                                display: inline-flex;
+                                                align-items: center;
+                                                gap: 6px;
+                                                padding: 6px 12px;
+                                                background: linear-gradient(135deg, #f6ffed 0%, #d9f7be 100%);
+                                                border: 1px solid #b7eb8f;
+                                                border-radius: 16px;
+                                                font-size: 13px;
+                                                color: #237804;
+                                                transition: all 0.2s;
+                                                cursor: default;
+                                            " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 8px rgba(82,196,26,0.2)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none';">
+                                                <span style="font-weight: 500;">${item.name}</span>
+                                                <span style="
+                                                    display: inline-flex;
+                                                    align-items: center;
+                                                    justify-content: center;
+                                                    min-width: 24px;
+                                                    height: 20px;
+                                                    padding: 0 6px;
+                                                    background: #52c41a;
+                                                    color: #fff;
+                                                    border-radius: 10px;
+                                                    font-size: 11px;
+                                                    font-weight: 600;
+                                                ">${item.value}</span>
+                                            </div>
+                                        `).join('')}
+                                    </div>
                                 </div>
-                            `).join('')}
+                                
+                                <!-- 负面反馈 -->
+                                <div>
+                                    <div style="
+                                        font-size: 13px;
+                                        font-weight: 500;
+                                        color: #ff4d4f;
+                                        margin-bottom: 8px;
+                                        display: flex;
+                                        align-items: center;
+                                        gap: 4px;
+                                    ">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ff4d4f" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
+                                        负面反馈
+                                    </div>
+                                    <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                                        ${feedbacks.map(item => `
+                                        <div style="
+                                            display: inline-flex;
+                                            align-items: center;
+                                            gap: 6px;
+                                            padding: 6px 12px;
+                                            background: linear-gradient(135deg, #fff2f0 0%, #ffccc7 100%);
+                                            border: 1px solid #ffa39e;
+                                            border-radius: 16px;
+                                            font-size: 13px;
+                                            color: #a8071a;
+                                            transition: all 0.2s;
+                                            cursor: default;
+                                        " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 8px rgba(255,77,79,0.2)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none';">
+                                            <span style="font-weight: 500;">${item.name}</span>
+                                            <span style="
+                                                display: inline-flex;
+                                                align-items: center;
+                                                justify-content: center;
+                                                min-width: 24px;
+                                                height: 20px;
+                                                padding: 0 6px;
+                                                background: #ff4d4f;
+                                                color: #fff;
+                                                border-radius: 10px;
+                                                font-size: 11px;
+                                                font-weight: 600;
+                                            ">${item.value}</span>
+                                        </div>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                `;
+                    `;
+                    
+                    // 恢复滚动位置
+                    setTimeout(() => {
+                        const listContainer = container.querySelector('[data-industry-list]');
+                        const feedbackContainer = container.querySelector('[data-feedback-content]');
+                        const savedPositions = scrollPositions[selectedIndustry];
+                        
+                        if (listContainer && savedPositions && savedPositions.list !== undefined) {
+                            listContainer.scrollTop = savedPositions.list;
+                        }
+                        if (feedbackContainer && savedPositions && savedPositions.feedback !== undefined) {
+                            feedbackContainer.scrollTop = savedPositions.feedback;
+                        }
+                    }, 0);
+                    
+                    // 绑定点击事件
+                    container.querySelectorAll('[data-industry]').forEach(el => {
+                        el.addEventListener('click', () => {
+                            selectedIndustry = el.getAttribute('data-industry');
+                            render();
+                        });
+                    });
+                };
                 
-                // 自定义滚动条样式（Webkit浏览器）
+                render();
+                
+                // 自定义滚动条样式
                 const style = document.createElement('style');
                 style.textContent = `
-                    #positiveFeedbackTags > div::-webkit-scrollbar {
-                        width: 6px;
+                    #industryFeedback [data-industry-list]::-webkit-scrollbar,
+                    #industryFeedback [data-feedback-content]::-webkit-scrollbar {
+                        width: 5px;
                     }
-                    #positiveFeedbackTags > div::-webkit-scrollbar-track {
+                    #industryFeedback [data-industry-list]::-webkit-scrollbar-track,
+                    #industryFeedback [data-feedback-content]::-webkit-scrollbar-track {
                         background: #f0f0f0;
                         border-radius: 3px;
                     }
-                    #positiveFeedbackTags > div::-webkit-scrollbar-thumb {
-                        background: #b7eb8f;
+                    #industryFeedback [data-industry-list]::-webkit-scrollbar-thumb,
+                    #industryFeedback [data-feedback-content]::-webkit-scrollbar-thumb {
+                        background: #ffa39e;
                         border-radius: 3px;
                     }
-                    #positiveFeedbackTags > div::-webkit-scrollbar-thumb:hover {
-                        background: #95de64;
+                    #industryFeedback [data-industry-list]::-webkit-scrollbar-thumb:hover,
+                    #industryFeedback [data-feedback-content]::-webkit-scrollbar-thumb:hover {
+                        background: #ff7875;
                     }
                 `;
                 document.head.appendChild(style);
@@ -10682,7 +10943,7 @@
                 
                 const myChart = echarts.init(chartDom);
                 
-                // 用户常见问题和机器人无法解答的问题
+                // 用户常见问题和机器人无法解答的问题（扩展到20条）
                 const questions = [
                     '能否提供离线地图包下载？',
                     '如何申请更高的并发配额？',
@@ -10698,7 +10959,12 @@
                     '支持哪些开发语言的SDK？',
                     '如何集成到小程序中？',
                     '有没有免费试用期？',
-                    '能否导出历史轨迹数据？'
+                    '能否导出历史轨迹数据？',
+                    '如何实现电子围栏功能？',
+                    '地图渲染性能如何优化？',
+                    '支持多点路径规划吗？',
+                    '如何处理大批量标点？',
+                    'API调用失败如何排查？'
                 ];
                 
                 // 为每个问题生成随机提及次数 (8-60)
@@ -10711,12 +10977,12 @@
                 // 按值从高到低排序
                 combined.sort((a, b) => b.value - a.value);
                 
-                // 只取前10个问题
-                const top10 = combined.slice(0, 10);
+                // 取前20个问题
+                const top20 = combined.slice(0, 20);
                 
                 // 因为ECharts横向条形图Y轴是从下往上的，所以需要反转数组让最大值显示在最上面
-                const sortedQuestions = top10.map(item => item.name).reverse();
-                const sortedValues = top10.map(item => item.value).reverse();
+                const sortedQuestions = top20.map(item => item.name).reverse();
+                const sortedValues = top20.map(item => item.value).reverse();
                 
                 const option = {
                     tooltip: {
@@ -10733,6 +10999,47 @@
                         top: '3%',
                         containLabel: true
                     },
+                    dataZoom: [
+                        {
+                            type: 'slider',
+                            yAxisIndex: 0,
+                            show: true,
+                            right: '1%',
+                            start: 0,
+                            end: 50,
+                            width: 20,
+                            handleSize: '100%',
+                            showDetail: false,
+                            brushSelect: false,
+                            fillerColor: 'rgba(250, 173, 20, 0.15)',
+                            borderColor: 'transparent',
+                            backgroundColor: '#f5f5f5',
+                            dataBackground: {
+                                lineStyle: { opacity: 0 },
+                                areaStyle: { opacity: 0 }
+                            },
+                            handleStyle: {
+                                color: '#faad14',
+                                borderColor: '#faad14'
+                            },
+                            moveHandleSize: 5,
+                            emphasis: {
+                                handleStyle: {
+                                    color: '#fa8c16',
+                                    borderColor: '#fa8c16'
+                                }
+                            }
+                        },
+                        {
+                            type: 'inside',
+                            yAxisIndex: 0,
+                            start: 0,
+                            end: 50,
+                            zoomOnMouseWheel: false,
+                            moveOnMouseWheel: true,
+                            preventDefaultMouseMove: false
+                        }
+                    ],
                     xAxis: {
                         type: 'value',
                         boundaryGap: [0, 0.01],
@@ -11069,6 +11376,486 @@
                         `).join('')}
                     </div>
                 `;
+            };
+
+            // 应用场景反馈 - 场景列表和负面反馈联动
+            const initScenarioFeedback = () => {
+                const container = document.getElementById('scenarioFeedback');
+                if (!container) return;
+                
+                // 15个应用场景
+                const scenarios = [
+                    '物流配送路线规划',
+                    '共享单车位置追踪',
+                    '外卖配送实时导航',
+                    '智慧停车场导引',
+                    '网约车乘客定位',
+                    '快递末端配送优化',
+                    '园区内部导航服务',
+                    '景区游览路线推荐',
+                    '商场室内定位导购',
+                    '企业资产位置管理',
+                    '社区物业巡检',
+                    '校园访客导览',
+                    '展会现场导航',
+                    '工地设备追踪',
+                    '应急救援调度'
+                ];
+                
+                // 每个场景对应的正面反馈数据
+                const scenarioPositiveFeedbacks = {
+                    '物流配送路线规划': [
+                        { name: '路径优化算法智能', value: 46 },
+                        { name: '配送时效预估准确', value: 39 },
+                        { name: '多点配送顺序合理', value: 33 },
+                        { name: '实时路况响应快', value: 28 },
+                        { name: '配送员功能完善', value: 23 }
+                    ],
+                    '共享单车位置追踪': [
+                        { name: '单车位置更新及时', value: 42 },
+                        { name: '停车点推荐准确', value: 36 },
+                        { name: '电子围栏判定精准', value: 30 },
+                        { name: '轨迹记录连续', value: 25 },
+                        { name: '禁停区域标注清晰', value: 21 }
+                    ],
+                    '外卖配送实时导航': [
+                        { name: '楼栋单元标注清晰', value: 48 },
+                        { name: '小区内部路线完整', value: 41 },
+                        { name: '商家入口准确', value: 34 },
+                        { name: '送达时间预估准', value: 29 },
+                        { name: '路线优化合理', value: 24 }
+                    ],
+                    '智慧停车场导引': [
+                        { name: '车位实时状态准确', value: 44 },
+                        { name: '停车场入口导航清晰', value: 37 },
+                        { name: '反向寻车功能强', value: 31 },
+                        { name: '车位预约便捷', value: 26 },
+                        { name: '停车费用显示准确', value: 22 }
+                    ],
+                    '网约车乘客定位': [
+                        { name: '上车点推荐合理', value: 43 },
+                        { name: '定位精准无漂移', value: 37 },
+                        { name: '司乘位置同步快', value: 31 },
+                        { name: '语音指引清晰', value: 26 },
+                        { name: '路口标注准确', value: 22 }
+                    ],
+                    '快递末端配送优化': [
+                        { name: '快递柜位置标注全', value: 45 },
+                        { name: '配送路径考虑楼层', value: 38 },
+                        { name: '批量揽收顺序优', value: 32 },
+                        { name: '驿站信息准确', value: 27 },
+                        { name: '地址解析精准', value: 23 }
+                    ],
+                    '园区内部导航服务': [
+                        { name: '园区地图精度高', value: 40 },
+                        { name: '楼宇编号逻辑清晰', value: 34 },
+                        { name: '室内导航功能完善', value: 29 },
+                        { name: '访客路线友好', value: 25 },
+                        { name: '会议室位置准确', value: 21 }
+                    ],
+                    '景区游览路线推荐': [
+                        { name: '推荐路线多样化', value: 42 },
+                        { name: '景点拥挤度预测准', value: 36 },
+                        { name: '游览时长估算准确', value: 30 },
+                        { name: '个性化推荐智能', value: 25 },
+                        { name: '景点讲解丰富', value: 21 }
+                    ],
+                    '商场室内定位导购': [
+                        { name: '室内定位精度高', value: 44 },
+                        { name: '商铺位置更新及时', value: 38 },
+                        { name: '品牌搜索结果准确', value: 32 },
+                        { name: '停车位关联完善', value: 27 },
+                        { name: '促销推送精准', value: 23 }
+                    ],
+                    '企业资产位置管理': [
+                        { name: '资产定位刷新快', value: 41 },
+                        { name: '电子围栏设置简单', value: 35 },
+                        { name: '轨迹回放功能强', value: 29 },
+                        { name: '批量管理便捷', value: 24 },
+                        { name: '告警规则灵活', value: 20 }
+                    ],
+                    '社区物业巡检': [
+                        { name: '巡检路线规划优', value: 38 },
+                        { name: '巡检点位标注清晰', value: 32 },
+                        { name: '巡检记录同步快', value: 27 },
+                        { name: '问题上报便捷', value: 23 },
+                        { name: '语音播报功能好', value: 19 }
+                    ],
+                    '校园访客导览': [
+                        { name: '校园地图更新及时', value: 40 },
+                        { name: '教学楼标注清晰', value: 34 },
+                        { name: '访客导航友好', value: 28 },
+                        { name: '食堂宿舍位置准确', value: 24 },
+                        { name: '校园活动信息全', value: 20 }
+                    ],
+                    '展会现场导航': [
+                        { name: '展位编号逻辑清晰', value: 43 },
+                        { name: '临时地图制作快', value: 37 },
+                        { name: '展商搜索功能强', value: 31 },
+                        { name: '导航流畅不卡顿', value: 26 },
+                        { name: '活动位置关联好', value: 22 }
+                    ],
+                    '工地设备追踪': [
+                        { name: '设备定位信号稳定', value: 42 },
+                        { name: '工地地图精度高', value: 36 },
+                        { name: '设备调度路径优', value: 30 },
+                        { name: '电子围栏准确', value: 25 },
+                        { name: '设备状态监控及时', value: 21 }
+                    ],
+                    '应急救援调度': [
+                        { name: '最优路径计算快', value: 47 },
+                        { name: '医院急诊入口清晰', value: 40 },
+                        { name: '实时路况更新快', value: 34 },
+                        { name: '优先通道标注全', value: 28 },
+                        { name: '应急设施信息准', value: 23 }
+                    ]
+                };
+                
+                // 每个场景对应的负面反馈数据
+                const scenarioFeedbacks = {
+                    '物流配送路线规划': [
+                        { name: '路径优化算法不够智能', value: 32 },
+                        { name: '配送时效预估不准', value: 27 },
+                        { name: '多点配送顺序不合理', value: 22 },
+                        { name: '实时路况响应慢', value: 18 },
+                        { name: '缺少配送员专属功能', value: 14 },
+                        { name: '货车限行提醒不及时', value: 11 },
+                        { name: '配送范围计算误差大', value: 9 }
+                    ],
+                    '共享单车位置追踪': [
+                        { name: '单车位置更新延迟', value: 30 },
+                        { name: '停车点推荐不准确', value: 25 },
+                        { name: '电子围栏判定有误', value: 20 },
+                        { name: '轨迹记录不连续', value: 17 },
+                        { name: '禁停区域标注不清', value: 13 },
+                        { name: '缺少电量显示功能', value: 10 },
+                        { name: '找车导航精度低', value: 8 }
+                    ],
+                    '外卖配送实时导航': [
+                        { name: '楼栋单元门牌不清晰', value: 34 },
+                        { name: '小区内部路线缺失', value: 28 },
+                        { name: '商家入口位置偏移', value: 23 },
+                        { name: '预计送达时间不准', value: 19 },
+                        { name: '电梯等候时间未计入', value: 15 },
+                        { name: '雨天路线未优化', value: 12 },
+                        { name: '夜间导航体验差', value: 10 }
+                    ],
+                    '智慧停车场导引': [
+                        { name: '车位实时状态不准', value: 31 },
+                        { name: '停车场入口导航错误', value: 26 },
+                        { name: '反向寻车功能弱', value: 21 },
+                        { name: '缺少车位预约功能', value: 18 },
+                        { name: '停车费用显示滞后', value: 14 },
+                        { name: '地下车库导航盲区', value: 11 },
+                        { name: '充电车位信息缺失', value: 9 }
+                    ],
+                    '网约车乘客定位': [
+                        { name: '上车点推荐不合理', value: 29 },
+                        { name: '定位漂移导致误差', value: 24 },
+                        { name: '司乘位置同步延迟', value: 20 },
+                        { name: '缺少实时语音指引', value: 16 },
+                        { name: '复杂路口标注不清', value: 13 },
+                        { name: '夜间识别度低', value: 10 },
+                        { name: '安全区域提示缺失', value: 8 }
+                    ],
+                    '快递末端配送优化': [
+                        { name: '快递柜位置标注不全', value: 33 },
+                        { name: '配送路径不考虑楼层', value: 27 },
+                        { name: '批量揽收顺序混乱', value: 22 },
+                        { name: '驿站营业时间不准', value: 18 },
+                        { name: '签收地址解析错误', value: 15 },
+                        { name: '缺少取件码关联', value: 12 },
+                        { name: '派件时效预测不准', value: 10 }
+                    ],
+                    '园区内部导航服务': [
+                        { name: '园区地图精度不够', value: 28 },
+                        { name: '楼宇编号逻辑混乱', value: 23 },
+                        { name: '室内导航功能缺失', value: 19 },
+                        { name: '访客路线不够友好', value: 16 },
+                        { name: '会议室位置难找', value: 13 },
+                        { name: '停车位与办公楼关联弱', value: 10 },
+                        { name: '门禁信息未集成', value: 8 }
+                    ],
+                    '景区游览路线推荐': [
+                        { name: '推荐路线过于单一', value: 30 },
+                        { name: '景点拥挤度预测不准', value: 25 },
+                        { name: '游览时长估算误差大', value: 21 },
+                        { name: '缺少个性化推荐', value: 17 },
+                        { name: '景点讲解信息简陋', value: 14 },
+                        { name: '无障碍路线缺失', value: 11 },
+                        { name: '季节性路线未优化', value: 9 }
+                    ],
+                    '商场室内定位导购': [
+                        { name: '室内定位精度低', value: 32 },
+                        { name: '商铺位置更新滞后', value: 27 },
+                        { name: '品牌搜索结果不准', value: 22 },
+                        { name: '停车位关联功能弱', value: 18 },
+                        { name: '促销活动推送不精准', value: 15 },
+                        { name: '楼层切换体验差', value: 12 },
+                        { name: '缺少AR导购功能', value: 10 }
+                    ],
+                    '企业资产位置管理': [
+                        { name: '资产定位刷新频率低', value: 29 },
+                        { name: '电子围栏设置复杂', value: 24 },
+                        { name: '轨迹回放功能简陋', value: 20 },
+                        { name: '批量资产管理不便', value: 17 },
+                        { name: '告警规则设置不灵活', value: 14 },
+                        { name: '数据导出格式受限', value: 11 },
+                        { name: '与ERP系统集成难', value: 9 }
+                    ],
+                    '社区物业巡检': [
+                        { name: '巡检路线规划不优', value: 26 },
+                        { name: '巡检点位标注不清', value: 22 },
+                        { name: '巡检记录同步慢', value: 18 },
+                        { name: '问题上报流程繁琐', value: 15 },
+                        { name: '缺少语音播报功能', value: 12 },
+                        { name: '夜间巡检体验差', value: 10 },
+                        { name: '统计报表不够详细', value: 8 }
+                    ],
+                    '校园访客导览': [
+                        { name: '校园地图更新不及时', value: 28 },
+                        { name: '教学楼命名规则复杂', value: 23 },
+                        { name: '访客预约未关联导航', value: 19 },
+                        { name: '食堂宿舍位置难找', value: 16 },
+                        { name: '校园活动信息缺失', value: 13 },
+                        { name: '无障碍路线不完善', value: 10 },
+                        { name: '多校区切换不便', value: 8 }
+                    ],
+                    '展会现场导航': [
+                        { name: '展位编号逻辑混乱', value: 31 },
+                        { name: '临时地图制作周期长', value: 26 },
+                        { name: '展商搜索功能弱', value: 21 },
+                        { name: '人流密集区域卡顿', value: 18 },
+                        { name: '活动议程未关联位置', value: 14 },
+                        { name: '缺少展会专属功能', value: 11 },
+                        { name: '多楼层切换体验差', value: 9 }
+                    ],
+                    '工地设备追踪': [
+                        { name: '设备定位信号不稳定', value: 30 },
+                        { name: '工地地图精度不够', value: 25 },
+                        { name: '设备调度路径不优', value: 20 },
+                        { name: '电子围栏漏报误报', value: 17 },
+                        { name: '设备状态监控滞后', value: 14 },
+                        { name: '施工区域动态更新慢', value: 11 },
+                        { name: '与项目管理系统割裂', value: 9 }
+                    ],
+                    '应急救援调度': [
+                        { name: '最优路径计算不够快', value: 33 },
+                        { name: '医院急诊入口标注不清', value: 28 },
+                        { name: '实时路况更新延迟', value: 23 },
+                        { name: '救护车优先通道缺失', value: 19 },
+                        { name: '应急避难所信息旧', value: 15 },
+                        { name: '灾害影响区域标注慢', value: 12 },
+                        { name: '跨区域协调功能弱', value: 10 }
+                    ]
+                };
+                
+                // 初始状态：选中第一个场景
+                let selectedScenario = scenarios[0];
+                let scrollPositions = {}; // 保存每个场景的滚动位置
+                
+                // 渲染函数
+                const render = () => {
+                    const positiveFeedbacks = scenarioPositiveFeedbacks[selectedScenario];
+                    const feedbacks = scenarioFeedbacks[selectedScenario];
+                    
+                    // 保存当前滚动位置
+                    const listContainer = container.querySelector('[data-scenario-list]');
+                    const feedbackContainer = container.querySelector('[data-scenario-feedback]');
+                    if (listContainer && feedbackContainer) {
+                        scrollPositions[selectedScenario] = {
+                            list: listContainer.scrollTop,
+                            feedback: feedbackContainer.scrollTop
+                        };
+                    }
+                    
+                    container.innerHTML = `
+                        <div style="display: flex; height: 100%; gap: 12px;">
+                            <!-- 左侧场景列表 -->
+                            <div data-scenario-list style="
+                                width: 140px;
+                                flex-shrink: 0;
+                                background: #fafafa;
+                                border-radius: 6px;
+                                padding: 8px;
+                                overflow-y: auto;
+                                max-height: 350px;
+                            ">
+                                ${scenarios.map(scenario => `
+                                    <div 
+                                        data-scenario="${scenario}"
+                                        style="
+                                            padding: 8px 10px;
+                                            margin-bottom: 4px;
+                                            border-radius: 4px;
+                                            font-size: 13px;
+                                            cursor: pointer;
+                                            transition: all 0.2s;
+                                            background: ${scenario === selectedScenario ? '#1890ff' : 'transparent'};
+                                            color: ${scenario === selectedScenario ? '#fff' : '#262626'};
+                                            font-weight: ${scenario === selectedScenario ? '500' : 'normal'};
+                                        "
+                                        onmouseover="if('${scenario}' !== '${selectedScenario}') { this.style.background='#f0f0f0'; }"
+                                        onmouseout="if('${scenario}' !== '${selectedScenario}') { this.style.background='transparent'; }"
+                                    >${scenario}</div>
+                                `).join('')}
+                            </div>
+                            
+                            <!-- 右侧反馈标签容器 -->
+                            <div data-scenario-feedback style="
+                                flex: 1;
+                                overflow-y: auto;
+                                overflow-x: hidden;
+                                padding: 4px 8px 4px 0;
+                                max-height: 350px;
+                            ">
+                                <!-- 正面反馈 -->
+                                <div style="margin-bottom: 16px;">
+                                    <div style="
+                                        font-size: 13px;
+                                        font-weight: 500;
+                                        color: #52c41a;
+                                        margin-bottom: 8px;
+                                        display: flex;
+                                        align-items: center;
+                                        gap: 4px;
+                                    ">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#52c41a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                        正面反馈
+                                    </div>
+                                    <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                                        ${positiveFeedbacks.map(item => `
+                                            <div style="
+                                                display: inline-flex;
+                                                align-items: center;
+                                                gap: 6px;
+                                                padding: 6px 12px;
+                                                background: linear-gradient(135deg, #f6ffed 0%, #d9f7be 100%);
+                                                border: 1px solid #b7eb8f;
+                                                border-radius: 16px;
+                                                font-size: 13px;
+                                                color: #237804;
+                                                transition: all 0.2s;
+                                                cursor: default;
+                                            " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 8px rgba(82,196,26,0.2)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none';">
+                                                <span style="font-weight: 500;">${item.name}</span>
+                                                <span style="
+                                                    display: inline-flex;
+                                                    align-items: center;
+                                                    justify-content: center;
+                                                    min-width: 24px;
+                                                    height: 20px;
+                                                    padding: 0 6px;
+                                                    background: #52c41a;
+                                                    color: #fff;
+                                                    border-radius: 10px;
+                                                    font-size: 11px;
+                                                    font-weight: 600;
+                                                ">${item.value}</span>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                                
+                                <!-- 负面反馈 -->
+                                <div>
+                                    <div style="
+                                        font-size: 13px;
+                                        font-weight: 500;
+                                        color: #ff4d4f;
+                                        margin-bottom: 8px;
+                                        display: flex;
+                                        align-items: center;
+                                        gap: 4px;
+                                    ">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ff4d4f" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
+                                        负面反馈
+                                    </div>
+                                    <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                                        ${feedbacks.map(item => `
+                                        <div style="
+                                            display: inline-flex;
+                                            align-items: center;
+                                            gap: 6px;
+                                            padding: 6px 12px;
+                                            background: linear-gradient(135deg, #fff2f0 0%, #ffccc7 100%);
+                                            border: 1px solid #ffa39e;
+                                            border-radius: 16px;
+                                            font-size: 13px;
+                                            color: #a8071a;
+                                            transition: all 0.2s;
+                                            cursor: default;
+                                        " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 8px rgba(255,77,79,0.2)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none';">
+                                            <span style="font-weight: 500;">${item.name}</span>
+                                            <span style="
+                                                display: inline-flex;
+                                                align-items: center;
+                                                justify-content: center;
+                                                min-width: 24px;
+                                                height: 20px;
+                                                padding: 0 6px;
+                                                background: #ff4d4f;
+                                                color: #fff;
+                                                border-radius: 10px;
+                                                font-size: 11px;
+                                                font-weight: 600;
+                                            ">${item.value}</span>
+                                        </div>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    // 恢复滚动位置
+                    setTimeout(() => {
+                        const listContainer = container.querySelector('[data-scenario-list]');
+                        const feedbackContainer = container.querySelector('[data-scenario-feedback]');
+                        const savedPositions = scrollPositions[selectedScenario];
+                        
+                        if (listContainer && savedPositions && savedPositions.list !== undefined) {
+                            listContainer.scrollTop = savedPositions.list;
+                        }
+                        if (feedbackContainer && savedPositions && savedPositions.feedback !== undefined) {
+                            feedbackContainer.scrollTop = savedPositions.feedback;
+                        }
+                    }, 0);
+                    
+                    // 绑定点击事件
+                    container.querySelectorAll('[data-scenario]').forEach(el => {
+                        el.addEventListener('click', () => {
+                            selectedScenario = el.getAttribute('data-scenario');
+                            render();
+                        });
+                    });
+                };
+                
+                render();
+                
+                // 自定义滚动条样式
+                const style = document.createElement('style');
+                style.textContent = `
+                    #scenarioFeedback [data-scenario-list]::-webkit-scrollbar,
+                    #scenarioFeedback [data-scenario-feedback]::-webkit-scrollbar {
+                        width: 5px;
+                    }
+                    #scenarioFeedback [data-scenario-list]::-webkit-scrollbar-track,
+                    #scenarioFeedback [data-scenario-feedback]::-webkit-scrollbar-track {
+                        background: #f0f0f0;
+                        border-radius: 3px;
+                    }
+                    #scenarioFeedback [data-scenario-list]::-webkit-scrollbar-thumb,
+                    #scenarioFeedback [data-scenario-feedback]::-webkit-scrollbar-thumb {
+                        background: #ffa39e;
+                        border-radius: 3px;
+                    }
+                    #scenarioFeedback [data-scenario-list]::-webkit-scrollbar-thumb:hover,
+                    #scenarioFeedback [data-scenario-feedback]::-webkit-scrollbar-thumb:hover {
+                        background: #ff7875;
+                    }
+                `;
+                document.head.appendChild(style);
             };
 
             // 应用场景 Top 10 条形图 - 随机生成场景数据
@@ -11865,7 +12652,17 @@
 
             const columns = [
                 { title: '通话ID', dataIndex: 'callId', key: 'callId', width: 180, fixed: 'left' },
-                { title: '线索ID', dataIndex: 'leadId', key: 'leadId', width: 180 },
+                { 
+                    title: '线索ID', 
+                    dataIndex: 'leadId', 
+                    key: 'leadId', 
+                    width: 180,
+                    render: (text) => (
+                        <span style={{ color: '#1890ff', cursor: 'pointer' }}>
+                            {text}
+                        </span>
+                    )
+                },
                 { title: 'UID', dataIndex: 'uid', key: 'uid', width: 140 },
                 { title: '联系人姓名', dataIndex: 'contactName', key: 'contactName', width: 120 },
                 { title: '被叫号码', dataIndex: 'calleeNumber', key: 'calleeNumber', width: 140 },
@@ -12111,6 +12908,28 @@
                     {/* 统计选项卡内容 - 外呼统计 */}
                     {activeTab === 'statistics' && (
                         <div style={{ padding: '16px 0' }}>
+                            {/* 筛选组件 */}
+                            <div style={{ 
+                                background: '#fff',
+                                padding: '16px',
+                                borderRadius: '8px',
+                                border: '1px solid #f0f0f0',
+                                marginBottom: '16px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '16px'
+                            }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <span style={{ fontSize: '14px', color: '#262626', fontWeight: 500 }}>日期：</span>
+                                    <antd.DatePicker 
+                                        picker="month"
+                                        placeholder="选择月份"
+                                        style={{ width: '180px' }}
+                                        format="YYYY年MM月"
+                                    />
+                                </div>
+                            </div>
+
                             {/* AI提示信息 */}
                             <div style={{ 
                                 display: 'flex',
@@ -12127,41 +12946,34 @@
                             {/* 行业与场景统计 */}
                             <div style={{ marginBottom: '24px' }}>
                                 <h3 style={{ fontSize: '16px', fontWeight: 500, marginBottom: '16px', color: '#262626' }}>行业与场景统计</h3>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                                
+                                {/* 第一栏：行业分布 + 行业反馈 */}
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
                                     {/* 行业分布 Top 10 空心饼图 */}
                                     <div style={{ background: '#fff', padding: '16px', borderRadius: '8px', border: '1px solid #f0f0f0' }}>
                                         <h4 style={{ fontSize: '14px', fontWeight: 500, marginBottom: '12px', color: '#595959' }}>行业分布 Top 10</h4>
                                         <div id="industryPieChart" style={{ width: '100%', height: '350px' }}></div>
                                     </div>
                                     
+                                    {/* 行业反馈 */}
+                                    <div style={{ background: '#fff', padding: '16px', borderRadius: '8px', border: '1px solid #f0f0f0', display: 'flex', flexDirection: 'column' }}>
+                                        <h4 style={{ fontSize: '14px', fontWeight: 500, marginBottom: '12px', color: '#595959' }}>行业反馈</h4>
+                                        <div id="industryFeedback" style={{ flex: 1, minHeight: 0 }}></div>
+                                    </div>
+                                </div>
+                                
+                                {/* 第二栏：应用场景 + 应用场景反馈 */}
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                                     {/* 应用场景 Top 10 条形图 */}
                                     <div style={{ background: '#fff', padding: '16px', borderRadius: '8px', border: '1px solid #f0f0f0' }}>
                                         <h4 style={{ fontSize: '14px', fontWeight: 500, marginBottom: '12px', color: '#595959' }}>应用场景 Top 10</h4>
                                         <div id="scenarioBarChart" style={{ width: '100%', height: '350px' }}></div>
                                     </div>
-                                </div>
-                            </div>
-
-                            {/* 满意度统计 */}
-                            <div style={{ marginBottom: '24px' }}>
-                                <h3 style={{ fontSize: '16px', fontWeight: 500, marginBottom: '16px', color: '#262626' }}>满意度统计</h3>
-                                <div style={{ display: 'grid', gridTemplateColumns: '400px 1fr 1fr', gap: '16px' }}>
-                                    {/* 总体满意度仪表盘 */}
-                                    <div style={{ background: '#fff', padding: '16px', borderRadius: '8px', border: '1px solid #f0f0f0' }}>
-                                        <h4 style={{ fontSize: '14px', fontWeight: 500, marginBottom: '12px', color: '#595959' }}>总体满意度</h4>
-                                        <div id="satisfactionGauge" style={{ width: '100%', height: '300px' }}></div>
-                                    </div>
                                     
-                                    {/* 正面反馈标签云 */}
-                                    <div style={{ background: '#fff', padding: '16px', borderRadius: '8px', border: '1px solid #f0f0f0' }}>
-                                        <h4 style={{ fontSize: '14px', fontWeight: 500, marginBottom: '12px', color: '#595959' }}>正面反馈</h4>
-                                        <div id="positiveFeedbackTags" style={{ width: '100%', height: '300px' }}></div>
-                                    </div>
-                                    
-                                    {/* 负面反馈标签云 */}
-                                    <div style={{ background: '#fff', padding: '16px', borderRadius: '8px', border: '1px solid #f0f0f0' }}>
-                                        <h4 style={{ fontSize: '14px', fontWeight: 500, marginBottom: '12px', color: '#595959' }}>负面反馈</h4>
-                                        <div id="negativeFeedbackTags" style={{ width: '100%', height: '300px' }}></div>
+                                    {/* 应用场景反馈 */}
+                                    <div style={{ background: '#fff', padding: '16px', borderRadius: '8px', border: '1px solid #f0f0f0', display: 'flex', flexDirection: 'column' }}>
+                                        <h4 style={{ fontSize: '14px', fontWeight: 500, marginBottom: '12px', color: '#595959' }}>应用场景反馈</h4>
+                                        <div id="scenarioFeedback" style={{ flex: 1, minHeight: 0 }}></div>
                                     </div>
                                 </div>
                             </div>
@@ -12169,9 +12981,9 @@
                             {/* 用户问题统计 */}
                             <div style={{ marginBottom: '24px' }}>
                                 <h3 style={{ fontSize: '16px', fontWeight: 500, marginBottom: '16px', color: '#262626' }}>用户问题统计</h3>
-                                <div style={{ background: '#fff', padding: '16px', borderRadius: '8px', border: '1px solid #f0f0f0' }}>
-                                    <h4 style={{ fontSize: '14px', fontWeight: 500, marginBottom: '12px', color: '#595959' }}>高频问题 Top 10</h4>
-                                    <div id="userQuestionsChart" style={{ width: '100%', height: '450px' }}></div>
+                                <div style={{ background: '#fff', padding: '16px', borderRadius: '8px', border: '1px solid #f0f0f0', height: '400px', display: 'flex', flexDirection: 'column' }}>
+                                    <h4 style={{ fontSize: '14px', fontWeight: 500, marginBottom: '12px', color: '#595959', flexShrink: 0 }}>高频问题</h4>
+                                    <div id="userQuestionsChart" style={{ width: '100%', flex: 1, minHeight: 0 }}></div>
                                 </div>
                             </div>
 
