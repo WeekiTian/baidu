@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>行业收入分布柱状图</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: radial-gradient(circle at top left, #eff6ff 0, #f9fafb 40%, #f3f4f6 100%);
+      color: #111827;
+      min-height: 100vh;
+      display: flex;
+    }
+    /* 左侧导航菜单样式 */
+    .sidebar {
+      width: 240px;
+      background: #ffffff;
+      border-right: 1px solid #e5e7eb;
+      padding: 24px 16px;
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+    }
+    .sidebar-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #111827;
+      margin-bottom: 24px;
+      padding-left: 12px;
+    }
+    .nav-item {
+      display: block;
+      padding: 10px 12px;
+      margin-bottom: 4px;
+      border-radius: 8px;
+      color: #4b5563;
+      text-decoration: none;
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+    .nav-item:hover {
+      background: #f3f4f6;
+      color: #111827;
+    }
+    .nav-item.active {
+      background: #eff6ff;
+      color: #2563eb;
+      font-weight: 600;
+    }
+
+    /* 主内容区域样式 */
+    .main-content {
+      flex: 1;
+      padding: 24px;
+      overflow-y: auto;
+    }
+    .page {
+      max-width: 1120px;
+      margin: 0 auto;
+    }
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .page-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: #111827;
+    }
+    .page-subtitle {
+      margin-top: 4px;
+      font-size: 12px;
+      color: #6b7280;
+    }
+    .page-badge {
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: rgba(59, 130, 246, 0.06);
+      color: #2563eb;
+      font-size: 11px;
+      border: 1px solid rgba(191, 219, 254, 0.9);
+    }
+    .card {
+      background: rgba(255, 255, 255, 0.96);
+      border-radius: 14px;
+      box-shadow:
+        0 18px 45px rgba(15, 23, 42, 0.06),
+        0 0 0 1px rgba(148, 163, 184, 0.2);
+      padding: 16px 18px 18px;
+    }
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 12px;
+    }
+    .card-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #111827;
+    }
+    .card-caption {
+      font-size: 12px;
+      color: #6b7280;
+    }
+    .hint {
+      margin-top: 4px;
+      font-size: 11px;
+      color: #9ca3af;
+    }
+    .chart-wrapper {
+      margin-top: 8px;
+      border-radius: 10px;
+      background: linear-gradient(145deg, #f9fafb, #eef2ff);
+      padding: 10px;
+    }
+    #bar-chart {
+      width: 100%;
+      height: 600px;
+    }
+    @media (max-width: 768px) {
+      body {
+        flex-direction: column;
+      }
+      .sidebar {
+        width: 100%;
+        border-right: none;
+        border-bottom: 1px solid #e5e7eb;
+        padding: 16px;
+      }
+      .main-content {
+        padding: 16px;
+      }
+      .card {
+        padding: 14px 12px 16px;
+      }
+      #bar-chart {
+        height: 500px;
+      }
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+</head>
+<body>
+  <!-- 左侧导航 -->
+  <aside class="sidebar">
+    <div class="sidebar-title">数据看板</div>
+    <nav>
+      <a href="客户阶段漏斗数据20260128.html" class="nav-item">客户转化漏斗</a>
+      <a href="industry_pie_chart.html" class="nav-item">客户行业分布</a>
+      <a href="industry_income_bar_chart.html" class="nav-item active">行业收入分布</a>
+      <a href="industry_penetration_stacked_bar.html" class="nav-item">行业渗透分析</a>
+    </nav>
+  </aside>
+
+  <!-- 主内容 -->
+  <main class="main-content">
+    <div class="page">
+      <header class="page-header">
+        <div>
+          <div class="page-title">行业收入分布图表</div>
+          <p class="page-subtitle">根据总金额合计统计 · 柱状图展示</p>
+        </div>
+        <span class="page-badge">百度地图开放平台 · 收入分析</span>
+      </header>
+
+      <section class="card" aria-label="行业收入柱状图">
+        <div class="card-header">
+          <div class="card-title">各行业总金额合计排名</div>
+          <div class="card-caption">维度：行业 | 指标：总金额（元）</div>
+        </div>
+        <p class="hint">说明：展示各行业的总金额合计，按金额从高到低排列。</p>
+
+        <div class="chart-wrapper">
+          <div id="bar-chart"></div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    const el = document.getElementById('bar-chart');
+    const chart = echarts.init(el);
+
+    // 解析后的数据（已排序）
+    const rawData = [
+      { "name": "信息服务", "value": 281582148.0 },
+      { "name": "其他", "value": 174575708.0 },
+      { "name": "企业应用", "value": 162541170.0 },
+      { "name": "金融理财", "value": 129463680.0 },
+      { "name": "生活服务", "value": 75045400.0 },
+      { "name": "电商零售", "value": 70143834.0 },
+      { "name": "快递物流", "value": 62387500.0 },
+      { "name": "智能设备", "value": 55327000.0 },
+      { "name": "房产服务", "value": 35184180.0 },
+      { "name": "智能汽车", "value": 34734500.0 },
+      { "name": "出行", "value": 34115000.0 },
+      { "name": "系统工具", "value": 27331500.0 },
+      { "name": "车主服务", "value": 21534000.0 },
+      { "name": "酒店旅游", "value": 21199800.0 },
+      { "name": "车载硬件", "value": 18220809.0 },
+      { "name": "社交网络", "value": 15207000.0 },
+      { "name": "手机厂商", "value": 13490000.0 },
+      { "name": "网约车", "value": 12699800.0 },
+      { "name": "交通管理", "value": 12598000.0 },
+      { "name": "教育培训", "value": 11863000.0 },
+      { "name": "运动健康", "value": 11459000.0 },
+      { "name": "传媒资讯", "value": 11440460.0 },
+      { "name": "城市政务", "value": 10702800.0 },
+      { "name": "游戏动漫", "value": 5598000.0 },
+      { "name": "影音娱乐", "value": 3080000.0 },
+      { "name": "科研公益", "value": 2891500.0 },
+      { "name": "商场购物", "value": 2400000.0 },
+      { "name": "未知行业", "value": 0.0 }
+    ];
+
+    const categoryData = rawData.map(item => item.name);
+    const valueData = rawData.map(item => item.value);
+
+    const option = {
+      backgroundColor: 'transparent',
+      tooltip: {
+        trigger: 'axis',
+        axisPointer: { type: 'shadow' },
+        backgroundColor: 'rgba(15, 23, 42, 0.96)',
+        borderWidth: 0,
+        textStyle: { color: '#f9fafb' },
+        formatter: (params) => {
+          const item = params[0];
+          return `${item.name}<br/>总金额：<b>${item.value.toLocaleString()}</b> 元`;
+        }
+      },
+      grid: {
+        left: '3%',
+        right: '4%',
+        bottom: '3%',
+        containLabel: true
+      },
+      xAxis: {
+        type: 'category',
+        data: categoryData,
+        axisLabel: {
+          interval: 0,
+          rotate: 45, // 倾斜标签以防重叠
+          color: '#4b5563'
+        },
+        axisLine: { lineStyle: { color: '#e5e7eb' } }
+      },
+      yAxis: {
+        type: 'value',
+        axisLabel: {
+          color: '#6b7280',
+          formatter: (value) => {
+            if (value >= 100000000) {
+              return (value / 100000000).toFixed(1) + '亿';
+            } else if (value >= 10000) {
+              return (value / 10000).toFixed(0) + '万';
+            }
+            return value;
+          }
+        },
+        splitLine: { lineStyle: { type: 'dashed', color: '#e5e7eb' } }
+      },
+      series: [
+        {
+          name: '总金额',
+          type: 'bar',
+          data: valueData,
+          itemStyle: {
+            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+              { offset: 0, color: '#3b82f6' },
+              { offset: 1, color: '#60a5fa' }
+            ]),
+            borderRadius: [4, 4, 0, 0]
+          },
+          emphasis: {
+            itemStyle: {
+              color: '#2563eb'
+            }
+          }
+        }
+      ]
+    };
+
+    chart.setOption(option);
+    window.addEventListener('resize', () => chart.resize());
+  </script>
+</body>
+</html>
