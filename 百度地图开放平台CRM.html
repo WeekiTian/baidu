@@ -1028,7 +1028,7 @@
 
     <script type="text/babel">
         const { useState, useEffect, useMemo } = React;
-        const { Layout, Menu, Button, Input, Table, Select, Space, Badge, ConfigProvider, Form, Radio, TreeSelect, Tag, message, Drawer, Avatar, Modal } = antd;
+        const { Layout, Menu, Button, Input, Table, Select, Space, Badge, ConfigProvider, Form, Radio, TreeSelect, Tag, message, Drawer, Avatar, Modal, Popover, Checkbox, Tabs, DatePicker } = antd;
         const { Header, Sider, Content } = Layout;
         const { Search } = Input;
         const { Option } = Select;
@@ -8557,6 +8557,761 @@
             );
         };
 
+        // 会话风险记录组件
+        const SessionRiskRecords = () => {
+            const [activeTab, setActiveTab] = useState('sensitive_word'); // sensitive_word | sensitive_behavior
+            const [searchKeyword, setSearchKeyword] = useState('');
+            const [dateRange, setDateRange] = useState(null);
+            const [auditStatus, setAuditStatus] = useState('all');
+            const [detailDrawerVisible, setDetailDrawerVisible] = useState(false);
+            const [selectedRecord, setSelectedRecord] = useState(null);
+
+            // 模拟敏感词记录数据（员工和微信客户的真实数据）
+            const sensitiveWordData = [
+                {
+                    key: '1',
+                    sensitiveWord: '违规广告',
+                    hitRule: '广告违规规则',
+                    senderType: 'employee',
+                    employeeName: '李想',
+                    sourceName: '李想',
+                    sourceType: 'single',
+                    avatar: null,
+                    auditStatus: 'pending',
+                    sendTime: '2026/03/19 14:30:25'
+                },
+                {
+                    key: '2',
+                    sensitiveWord: '价格优惠',
+                    hitRule: '敏感词规则-价格',
+                    senderType: 'wechat_customer',
+                    employeeName: '王伟军',
+                    sourceName: '客户交流群',
+                    sourceType: 'group',
+                    avatar: null,
+                    auditStatus: 'no_risk',
+                    sendTime: '2026/03/19 13:20:15'
+                },
+                {
+                    key: '3',
+                    sensitiveWord: '返利',
+                    hitRule: '敏感词规则-返利',
+                    senderType: 'employee',
+                    employeeName: '毛奇',
+                    sourceName: '毛奇',
+                    sourceType: 'single',
+                    avatar: null,
+                    auditStatus: 'violation',
+                    sendTime: '2026/03/19 11:45:30'
+                },
+                {
+                    key: '4',
+                    sensitiveWord: '加微信',
+                    hitRule: '敏感行为规则-引流',
+                    senderType: 'wechat_customer',
+                    employeeName: '谢丽',
+                    sourceName: '星辰大海',
+                    sourceType: 'single',
+                    avatar: 'https://i.pravatar.cc/150?img=5',
+                    auditStatus: 'pending',
+                    sendTime: '2026/03/18 16:20:00'
+                },
+                {
+                    key: '5',
+                    sensitiveWord: '红包',
+                    hitRule: '敏感词规则-利益',
+                    senderType: 'employee',
+                    employeeName: '周杰',
+                    sourceName: '周杰',
+                    sourceType: 'single',
+                    avatar: null,
+                    auditStatus: 'no_risk',
+                    sendTime: '2026/03/18 10:30:45'
+                },
+                {
+                    key: '6',
+                    sensitiveWord: '谢谢惠顾',
+                    hitRule: '广告违规规则',
+                    senderType: 'wechat_customer',
+                    employeeName: '王晨',
+                    sourceName: 'VIP客户群',
+                    sourceType: 'group',
+                    avatar: null,
+                    auditStatus: 'violation',
+                    sendTime: '2026/03/17 15:10:20'
+                },
+                {
+                    key: '7',
+                    sensitiveWord: '抽奖',
+                    hitRule: '敏感词规则-促销',
+                    senderType: 'employee',
+                    employeeName: '王鸿码',
+                    sourceName: '王鸿码',
+                    sourceType: 'single',
+                    avatar: null,
+                    auditStatus: 'pending',
+                    sendTime: '2026/03/17 09:25:30'
+                },
+                {
+                    key: '8',
+                    sensitiveWord: '私聊',
+                    hitRule: '敏感行为规则-引流',
+                    senderType: 'wechat_customer',
+                    employeeName: '梁晨鹿',
+                    sourceName: '逆风的方向',
+                    sourceType: 'single',
+                    avatar: 'https://i.pravatar.cc/150?img=12',
+                    auditStatus: 'no_risk',
+                    sendTime: '2026/03/16 14:50:15'
+                }
+            ];
+
+            // 模拟敏感行为记录数据（消息来源改为微信客户）
+            const sensitiveBehaviorData = [
+                {
+                    key: '1',
+                    sensitiveWord: '频繁添加好友',
+                    hitRule: '敏感行为规则-频繁操作',
+                    senderType: 'wechat_customer',
+                    employeeName: '李想',
+                    sourceName: '客户福利群',
+                    sourceType: 'group',
+                    avatar: null,
+                    auditStatus: 'pending',
+                    sendTime: '2026/03/19 14:25:00'
+                },
+                {
+                    key: '2',
+                    sensitiveWord: '删除客户',
+                    hitRule: '敏感行为规则-异常操作',
+                    senderType: 'employee',
+                    employeeName: '王伟军',
+                    sourceName: '往事如烟',
+                    sourceType: 'single',
+                    avatar: 'https://i.pravatar.cc/150?img=4',
+                    auditStatus: 'violation',
+                    sendTime: '2026/03/19 10:15:30'
+                },
+                {
+                    key: '3',
+                    sensitiveWord: '发送名片',
+                    hitRule: '敏感行为规则-信息泄露',
+                    senderType: 'wechat_customer',
+                    employeeName: '毛奇',
+                    sourceName: '蓝色梦幻',
+                    sourceType: 'single',
+                    avatar: 'https://i.pravatar.cc/150?img=6',
+                    auditStatus: 'no_risk',
+                    sendTime: '2026/03/18 16:40:20'
+                },
+                {
+                    key: '4',
+                    sensitiveWord: '转发聊天记录',
+                    hitRule: '敏感行为规则-信息泄露',
+                    senderType: 'employee',
+                    employeeName: '谢丽',
+                    sourceName: '秋水伊人',
+                    sourceType: 'single',
+                    avatar: 'https://i.pravatar.cc/150?img=9',
+                    auditStatus: 'pending',
+                    sendTime: '2026/03/18 11:20:45'
+                },
+                {
+                    key: '5',
+                    sensitiveWord: '拉群',
+                    hitRule: '敏感行为规则-异常操作',
+                    senderType: 'wechat_customer',
+                    employeeName: '周杰',
+                    sourceName: '产品咨询群',
+                    sourceType: 'group',
+                    avatar: null,
+                    auditStatus: 'violation',
+                    sendTime: '2026/03/17 09:30:10'
+                },
+                {
+                    key: '6',
+                    sensitiveWord: '频繁删除好友',
+                    hitRule: '敏感行为规则-频繁操作',
+                    senderType: 'employee',
+                    employeeName: '王晨',
+                    sourceName: '一路向北',
+                    sourceType: 'single',
+                    avatar: 'https://i.pravatar.cc/150?img=11',
+                    auditStatus: 'pending',
+                    sendTime: '2026/03/16 15:20:00'
+                },
+                {
+                    key: '7',
+                    sensitiveWord: '发送位置',
+                    hitRule: '敏感行为规则-信息泄露',
+                    senderType: 'wechat_customer',
+                    employeeName: '梁晨鹿',
+                    sourceName: '梦里花落知多少',
+                    sourceType: 'single',
+                    avatar: 'https://i.pravatar.cc/150?img=13',
+                    auditStatus: 'no_risk',
+                    sendTime: '2026/03/15 14:10:30'
+                }
+            ];
+
+            // 根据筛选条件过滤数据
+            const getFilteredData = () => {
+                let data = activeTab === 'sensitive_word' ? sensitiveWordData : sensitiveBehaviorData;
+                
+                // 敏感词记录Tab下添加搜索过滤
+                if (activeTab === 'sensitive_word' && searchKeyword) {
+                    data = data.filter(item => 
+                        item.sensitiveWord.toLowerCase().includes(searchKeyword.toLowerCase())
+                    );
+                }
+                
+                if (auditStatus !== 'all') {
+                    data = data.filter(item => item.auditStatus === auditStatus);
+                }
+                
+                if (dateRange && dateRange.length === 2) {
+                    const [start, end] = dateRange;
+                    data = data.filter(item => {
+                        const itemDate = new Date(item.sendTime.replace(/\//g, '-'));
+                        return itemDate >= start.startOf('day').toDate() && itemDate <= end.endOf('day').toDate();
+                    });
+                }
+                
+                return data;
+            };
+
+            const filteredData = getFilteredData();
+
+            // 审核结果映射
+            const auditStatusMap = {
+                'pending': { text: '待审核', color: '#faad14' },
+                'no_risk': { text: '无风险', color: '#52c41a' },
+                'violation': { text: '违规', color: '#ff4d4f' }
+            };
+
+            // Tab配置
+            const tabItems = [
+                { key: 'sensitive_word', label: '敏感词记录' },
+                { key: 'sensitive_behavior', label: '敏感行为记录' }
+            ];
+
+            // 获取头像背景色
+            const getAvatarBgColor = (type) => {
+                return type === 'group' ? '#52c41a' : '#1890ff';
+            };
+
+            // 敏感词记录的表格列定义
+            const sensitiveWordColumns = [
+                {
+                    title: '触发敏感词',
+                    dataIndex: 'sensitiveWord',
+                    key: 'sensitiveWord',
+                    width: 150
+                },
+                {
+                    title: '命中规则',
+                    dataIndex: 'hitRule',
+                    key: 'hitRule',
+                    width: 180
+                },
+                {
+                    title: '发送人',
+                    dataIndex: 'senderType',
+                    key: 'senderType',
+                    width: 200,
+                    render: (type, record) => (
+                        type === 'employee' ? (
+                            <span>{record.employeeName}</span>
+                        ) : (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                {record.avatar ? (
+                                    <img 
+                                        src={record.avatar} 
+                                        alt={record.sourceName}
+                                        style={{ 
+                                            width: '24px', 
+                                            height: '24px', 
+                                            borderRadius: '50%',
+                                            objectFit: 'cover'
+                                        }}
+                                    />
+                                ) : (
+                                    <Avatar 
+                                        size={24}
+                                        style={{ 
+                                            backgroundColor: record.sourceType === 'group' ? '#52c41a' : '#1890ff',
+                                            fontSize: '11px'
+                                        }}
+                                    >
+                                        {record.sourceType === 'group' ? '群' : record.sourceName.charAt(0)}
+                                    </Avatar>
+                                )}
+                                <span>{record.sourceName}</span>
+                                {record.sourceType === 'group' ? (
+                                    <span style={{ 
+                                        marginLeft: '6px', 
+                                        padding: '1px 6px', 
+                                        backgroundColor: '#52c41a', 
+                                        color: '#fff', 
+                                        borderRadius: '3px',
+                                        fontSize: '11px'
+                                    }}>群聊</span>
+                                ) : (
+                                    <span style={{ color: '#52c41a', fontSize: '11px' }}>@微信</span>
+                                )}
+                            </div>
+                        )
+                    )
+                },
+                {
+                    title: '员工',
+                    dataIndex: 'employeeName',
+                    key: 'employeeName',
+                    width: 100
+                },
+                {
+                    title: '消息来源',
+                    dataIndex: 'sourceName',
+                    key: 'sourceName',
+                    width: 200,
+                    render: (name, record) => (
+                        record.senderType === 'employee' ? (
+                            <span>{name}</span>
+                        ) : (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                {record.avatar ? (
+                                    <img 
+                                        src={record.avatar} 
+                                        alt={name}
+                                        style={{ 
+                                            width: '28px', 
+                                            height: '28px', 
+                                            borderRadius: '50%',
+                                            objectFit: 'cover'
+                                        }}
+                                    />
+                                ) : (
+                                    <Avatar 
+                                        size={28}
+                                        style={{ 
+                                            backgroundColor: record.sourceType === 'group' ? '#52c41a' : '#1890ff',
+                                            fontSize: '12px'
+                                        }}
+                                    >
+                                        {record.sourceType === 'group' ? '群' : name.charAt(0)}
+                                    </Avatar>
+                                )}
+                                <span>
+                                    {name}
+                                    {record.sourceType === 'group' ? (
+                                        <span style={{ 
+                                            marginLeft: '6px', 
+                                            padding: '1px 6px', 
+                                            backgroundColor: '#52c41a', 
+                                            color: '#fff', 
+                                            borderRadius: '3px',
+                                            fontSize: '11px'
+                                        }}>群聊</span>
+                                    ) : (
+                                        <span style={{ color: '#52c41a', fontSize: '12px', fontWeight: '500' }}>@微信</span>
+                                    )}
+                                </span>
+                            </div>
+                        )
+                    )
+                },
+                {
+                    title: '审核结果',
+                    dataIndex: 'auditStatus',
+                    key: 'auditStatus',
+                    width: 100,
+                    render: (status) => {
+                        const statusInfo = auditStatusMap[status];
+                        return (
+                            <span style={{ 
+                                color: statusInfo.color,
+                                fontWeight: 500
+                            }}>
+                                {statusInfo.text}
+                            </span>
+                        );
+                    }
+                },
+                {
+                    title: '发送时间',
+                    dataIndex: 'sendTime',
+                    key: 'sendTime',
+                    width: 180
+                },
+                {
+                    title: '操作',
+                    key: 'action',
+                    width: 100,
+                    fixed: 'right',
+                    render: (_, record) => (
+                        <a 
+                            style={{ color: '#1890ff' }}
+                            onClick={() => {
+                                setSelectedRecord(record);
+                                setDetailDrawerVisible(true);
+                            }}
+                        >
+                            查看详情
+                        </a>
+                    )
+                }
+            ];
+
+            // 敏感行为记录的表格列定义
+            const sensitiveBehaviorColumns = [
+                {
+                    title: '触发行为',
+                    dataIndex: 'sensitiveWord',
+                    key: 'sensitiveWord',
+                    width: 150
+                },
+                {
+                    title: '命中规则',
+                    dataIndex: 'hitRule',
+                    key: 'hitRule',
+                    width: 180
+                },
+                {
+                    title: '触发人',
+                    dataIndex: 'employeeName',
+                    key: 'employeeName',
+                    width: 120,
+                    render: (name, record) => (
+                        record.senderType === 'employee' ? (
+                            <span>{name}</span>
+                        ) : (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                {record.avatar ? (
+                                    <img 
+                                        src={record.avatar} 
+                                        alt={record.sourceName}
+                                        style={{ 
+                                            width: '24px', 
+                                            height: '24px', 
+                                            borderRadius: '50%',
+                                            objectFit: 'cover'
+                                        }}
+                                    />
+                                ) : (
+                                    <Avatar 
+                                        size={24}
+                                        style={{ 
+                                            backgroundColor: record.sourceType === 'group' ? '#52c41a' : '#1890ff',
+                                            fontSize: '11px'
+                                        }}
+                                    >
+                                        {record.sourceType === 'group' ? '群' : record.sourceName.charAt(0)}
+                                    </Avatar>
+                                )}
+                                <span>{record.sourceName}</span>
+                                {record.sourceType === 'group' ? (
+                                    <span style={{ 
+                                        marginLeft: '6px', 
+                                        padding: '1px 6px', 
+                                        backgroundColor: '#52c41a', 
+                                        color: '#fff', 
+                                        borderRadius: '3px',
+                                        fontSize: '11px'
+                                    }}>群聊</span>
+                                ) : (
+                                    <span style={{ color: '#52c41a', fontSize: '11px' }}>@微信</span>
+                                )}
+                            </div>
+                        )
+                    )
+                },
+                {
+                    title: '消息来源',
+                    dataIndex: 'sourceName',
+                    key: 'sourceName',
+                    width: 200,
+                    render: (name, record) => (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            {record.avatar ? (
+                                <img 
+                                    src={record.avatar} 
+                                    alt={name}
+                                    style={{ 
+                                        width: '28px', 
+                                        height: '28px', 
+                                        borderRadius: '50%',
+                                        objectFit: 'cover'
+                                    }}
+                                />
+                            ) : (
+                                <Avatar 
+                                    size={28}
+                                    style={{ 
+                                        backgroundColor: record.sourceType === 'group' ? '#52c41a' : '#1890ff',
+                                        fontSize: '12px'
+                                    }}
+                                >
+                                    {record.sourceType === 'group' ? '群' : name.charAt(0)}
+                                </Avatar>
+                            )}
+                            <span>
+                                {name}
+                                {record.sourceType === 'group' ? (
+                                    <span style={{ 
+                                        marginLeft: '6px', 
+                                        padding: '1px 6px', 
+                                        backgroundColor: '#52c41a', 
+                                        color: '#fff', 
+                                        borderRadius: '3px',
+                                        fontSize: '11px'
+                                    }}>群聊</span>
+                                ) : (
+                                    <span style={{ color: '#52c41a', fontSize: '12px', fontWeight: '500' }}>@微信</span>
+                                )}
+                            </span>
+                        </div>
+                    )
+                },
+                {
+                    title: '审核结果',
+                    dataIndex: 'auditStatus',
+                    key: 'auditStatus',
+                    width: 100,
+                    render: (status) => {
+                        const statusInfo = auditStatusMap[status];
+                        return (
+                            <span style={{ 
+                                color: statusInfo.color,
+                                fontWeight: 500
+                            }}>
+                                {statusInfo.text}
+                            </span>
+                        );
+                    }
+                },
+                {
+                    title: '触发时间',
+                    dataIndex: 'sendTime',
+                    key: 'sendTime',
+                    width: 180
+                },
+                {
+                    title: '操作',
+                    key: 'action',
+                    width: 100,
+                    fixed: 'right',
+                    render: (_, record) => (
+                        <a 
+                            style={{ color: '#1890ff' }}
+                            onClick={() => {
+                                setSelectedRecord(record);
+                                setDetailDrawerVisible(true);
+                            }}
+                        >
+                            查看详情
+                        </a>
+                    )
+                }
+            ];
+
+            // 根据Tab获取当前列
+            const getColumns = () => {
+                return activeTab === 'sensitive_word' ? sensitiveWordColumns : sensitiveBehaviorColumns;
+            };
+
+            return (
+                <div className="content-card">
+                    <h1 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '16px', color: '#262626' }}>
+                        会话风险记录
+                    </h1>
+
+                    {/* Tab页签 */}
+                    <div style={{ marginBottom: '16px' }}>
+                        <Tabs 
+                            activeKey={activeTab} 
+                            onChange={setActiveTab}
+                            items={tabItems}
+                        />
+                    </div>
+
+                    {/* 筛选栏 */}
+                    <div className="search-section">
+                        <div className="search-left">
+                            {activeTab === 'sensitive_word' && (
+                                <Input
+                                    placeholder="查询触发的敏感词"
+                                    value={searchKeyword}
+                                    onChange={(e) => setSearchKeyword(e.target.value)}
+                                    style={{ width: 200 }}
+                                    allowClear
+                                />
+                            )}
+                            <DatePicker.RangePicker
+                                value={dateRange}
+                                onChange={setDateRange}
+                                format="YYYY/MM/DD"
+                                placeholder={['开始时间', '结束时间']}
+                            />
+                            <span style={{ color: '#666', fontSize: '14px', marginRight: '8px' }}>审核结果:</span>
+                            <Select
+                                value={auditStatus}
+                                onChange={setAuditStatus}
+                                style={{ width: 120 }}
+                            >
+                                <Option value="all">全部</Option>
+                                <Option value="pending">待审核</Option>
+                                <Option value="no_risk">无风险</Option>
+                                <Option value="violation">违规</Option>
+                            </Select>
+                        </div>
+                    </div>
+
+                    {/* 表格操作按钮 */}
+                    <div className="table-actions">
+                        <div className="table-actions-left">
+                            <span style={{ color: '#666', fontSize: '14px' }}>
+                                共 {filteredData.length} 条记录
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* 数据表格 */}
+                    <Table
+                        columns={getColumns()}
+                        dataSource={filteredData}
+                        pagination={{
+                            total: filteredData.length,
+                            pageSize: 10,
+                            showSizeChanger: true,
+                            showTotal: (total) => `共 ${total} 条`,
+                            showQuickJumper: true
+                        }}
+                        scroll={{ x: 'max-content' }}
+                    />
+
+                    {/* 详情抽屉 */}
+                    <Drawer
+                        title="记录详情"
+                        placement="right"
+                        width={500}
+                        open={detailDrawerVisible}
+                        onClose={() => setDetailDrawerVisible(false)}
+                    >
+                        {selectedRecord && (
+                            <div>
+                                <div style={{ marginBottom: '16px' }}>
+                                    <div style={{ color: '#8c8c8c', fontSize: '13px', marginBottom: '4px' }}>
+                                        {activeTab === 'sensitive_word' ? '触发敏感词' : '触发行为'}
+                                    </div>
+                                    <div style={{ fontSize: '14px', color: '#262626' }}>{selectedRecord.sensitiveWord}</div>
+                                </div>
+                                <div style={{ marginBottom: '16px' }}>
+                                    <div style={{ color: '#8c8c8c', fontSize: '13px', marginBottom: '4px' }}>命中规则</div>
+                                    <div style={{ fontSize: '14px', color: '#262626' }}>{selectedRecord.hitRule}</div>
+                                </div>
+                                <div style={{ marginBottom: '16px' }}>
+                                    <div style={{ color: '#8c8c8c', fontSize: '13px', marginBottom: '4px' }}>
+                                        {activeTab === 'sensitive_word' ? '发送人' : '触发人'}
+                                    </div>
+                                    <div style={{ fontSize: '14px', color: '#262626' }}>
+                                        {activeTab === 'sensitive_word' ? (
+                                            selectedRecord.senderType === 'employee' ? (
+                                                selectedRecord.employeeName
+                                            ) : (
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                    {selectedRecord.avatar ? (
+                                                        <img 
+                                                            src={selectedRecord.avatar} 
+                                                            alt={selectedRecord.sourceName}
+                                                            style={{ 
+                                                                width: '24px', 
+                                                                height: '24px', 
+                                                                borderRadius: '50%',
+                                                                objectFit: 'cover'
+                                                            }}
+                                                        />
+                                                    ) : (
+                                                        <Avatar 
+                                                            size={24}
+                                                            style={{ 
+                                                                backgroundColor: '#1890ff',
+                                                                fontSize: '11px'
+                                                            }}
+                                                        >
+                                                            {selectedRecord.sourceName.charAt(0)}
+                                                        </Avatar>
+                                                    )}
+                                                    <span>{selectedRecord.sourceName}</span>
+                                                    <span style={{ color: '#52c41a', fontSize: '11px' }}>@微信</span>
+                                                </div>
+                                            )
+                                        ) : (
+                                            selectedRecord.employeeName
+                                        )}
+                                    </div>
+                                </div>
+                                {activeTab === 'sensitive_word' && (
+                                    <div style={{ marginBottom: '16px' }}>
+                                        <div style={{ color: '#8c8c8c', fontSize: '13px', marginBottom: '4px' }}>员工</div>
+                                        <div style={{ fontSize: '14px', color: '#262626' }}>{selectedRecord.employeeName}</div>
+                                    </div>
+                                )}
+                                <div style={{ marginBottom: '16px' }}>
+                                    <div style={{ color: '#8c8c8c', fontSize: '13px', marginBottom: '4px' }}>消息来源</div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        {selectedRecord.avatar ? (
+                                            <img 
+                                                src={selectedRecord.avatar} 
+                                                alt={selectedRecord.sourceName}
+                                                style={{ 
+                                                    width: '32px', 
+                                                    height: '32px', 
+                                                    borderRadius: '50%',
+                                                    objectFit: 'cover'
+                                                }}
+                                            />
+                                        ) : (
+                                            <Avatar 
+                                                size={32}
+                                                style={{ 
+                                                    backgroundColor: selectedRecord.sourceType === 'group' ? '#52c41a' : '#1890ff',
+                                                    fontSize: '14px'
+                                                }}
+                                            >
+                                                {selectedRecord.sourceType === 'group' ? '群' : selectedRecord.sourceName.charAt(0)}
+                                            </Avatar>
+                                        )}
+                                        <div>
+                                            <span style={{ fontSize: '14px', color: '#262626' }}>{selectedRecord.sourceName}</span>
+                                            {selectedRecord.senderType === 'wechat_customer' && (
+                                                <span style={{ color: '#52c41a', fontSize: '12px', marginLeft: '4px' }}>@微信</span>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div style={{ marginBottom: '16px' }}>
+                                    <div style={{ color: '#8c8c8c', fontSize: '13px', marginBottom: '4px' }}>审核结果</div>
+                                    <div style={{ 
+                                        fontSize: '14px', 
+                                        color: auditStatusMap[selectedRecord.auditStatus].color,
+                                        fontWeight: 500
+                                    }}>
+                                        {auditStatusMap[selectedRecord.auditStatus].text}
+                                    </div>
+                                </div>
+                                <div style={{ marginBottom: '16px' }}>
+                                    <div style={{ color: '#8c8c8c', fontSize: '13px', marginBottom: '4px' }}>
+                                        {activeTab === 'sensitive_word' ? '发送时间' : '触发时间'}
+                                    </div>
+                                    <div style={{ fontSize: '14px', color: '#262626' }}>{selectedRecord.sendTime}</div>
+                                </div>
+                            </div>
+                        )}
+                    </Drawer>
+                </div>
+            );
+        };
+
         // 全局搜索组件
         const GlobalSearch = () => {
             const [form] = Form.useForm();
@@ -10271,6 +11026,1847 @@
                             });
                         })
                     )}
+                </div>
+            );
+        };
+
+        // 敏感词设置组件
+        const SensitiveWordSettings = () => {
+            const [categorySearchKeyword, setCategorySearchKeyword] = useState('');
+            const [selectedCategory, setSelectedCategory] = useState(null);
+            const [deletePopoverVisible, setDeletePopoverVisible] = useState({});
+            const [deleteCategoryPopoverVisible, setDeleteCategoryPopoverVisible] = useState(null);
+            const [hoveredCategoryId, setHoveredCategoryId] = useState(null);
+            const [addCategoryModalVisible, setAddCategoryModalVisible] = useState(false);
+            const [addSensitiveWordModalVisible, setAddSensitiveWordModalVisible] = useState(false);
+            const [editingSensitiveWord, setEditingSensitiveWord] = useState(null);
+            const [editingCategory, setEditingCategory] = useState(null);
+
+            // 组织架构和员工数据 - 支持选部门和员工
+            const [departmentTree] = useState([
+                {
+                    title: '全公司',
+                    value: 'dept1',
+                    key: 'dept1',
+                    children: [
+                        {
+                            title: '销售部',
+                            value: 'dept1-1',
+                            key: 'dept1-1',
+                            children: [
+                                { title: '销售一组', value: 'dept1-1-1', key: 'dept1-1-1', children: [
+                                    { title: '李想', value: 'emp1', key: 'emp1', isEmployee: true },
+                                    { title: '王伟军', value: 'emp2', key: 'emp2', isEmployee: true }
+                                ]},
+                                { title: '销售二组', value: 'dept1-1-2', key: 'dept1-1-2', children: [
+                                    { title: '毛奇', value: 'emp3', key: 'emp3', isEmployee: true },
+                                    { title: '谢丽', value: 'emp4', key: 'emp4', isEmployee: true }
+                                ]}
+                            ]
+                        },
+                        {
+                            title: '技术部',
+                            value: 'dept1-2',
+                            key: 'dept1-2',
+                            children: [
+                                { title: '研发组', value: 'dept1-2-1', key: 'dept1-2-1', children: [
+                                    { title: '周杰', value: 'emp5', key: 'emp5', isEmployee: true }
+                                ]},
+                                { title: '测试组', value: 'dept1-2-2', key: 'dept1-2-2', children: [
+                                    { title: '陈明', value: 'emp6', key: 'emp6', isEmployee: true }
+                                ]}
+                            ]
+                        },
+                        { title: '客服部', value: 'dept1-3', key: 'dept1-3', children: [
+                            { title: '赵敏', value: 'emp7', key: 'emp7', isEmployee: true }
+                        ]},
+                        { title: '财务部', value: 'dept1-4', key: 'dept1-4', children: [
+                            { title: '钱刚', value: 'emp8', key: 'emp8', isEmployee: true }
+                        ]}
+                    ]
+                }
+            ]);
+
+            // 敏感词分类数据 - 包含适用范围
+            const [categories, setCategories] = useState([
+                { id: 1, name: '违规内容', scope: ['dept1-1-1', 'dept1-2'], scopeNames: ['销售一组', '技术部'] },
+                { id: 2, name: '敏感话题', scope: ['dept1'], scopeNames: ['全公司'] },
+                { id: 3, name: '广告推广', scope: ['dept1-1'], scopeNames: ['销售部'] },
+                { id: 4, name: '不当言论', scope: ['dept1'], scopeNames: ['全公司'] },
+                { id: 5, name: '竞品提及', scope: ['dept1-1-1'], scopeNames: ['销售一组'] }
+            ]);
+
+            // 敏感词数据 - 按分类ID存储
+            const [sensitiveWordsByCategory, setSensitiveWordsByCategory] = useState({
+                1: [
+                    { id: 1, word: '贪污', triggerCount: 15, categoryId: 1, creator: '管理员', createTime: '2026-01-10 10:30:00', modifier: '管理员', modifyTime: '2026-01-15 14:20:00' },
+                    { id: 2, word: '受贿', triggerCount: 8, categoryId: 1, creator: '管理员', createTime: '2026-01-10 10:30:00', modifier: '管理员', modifyTime: '2026-01-15 14:20:00' },
+                    { id: 3, word: '贿赂', triggerCount: 12, categoryId: 1, creator: '管理员', createTime: '2026-01-10 10:30:00', modifier: '管理员', modifyTime: '2026-01-16 09:15:00' }
+                ],
+                2: [
+                    { id: 4, word: '色情', triggerCount: 25, categoryId: 2, creator: '管理员', createTime: '2026-01-11 11:00:00', modifier: '管理员', modifyTime: '2026-01-11 11:00:00' },
+                    { id: 5, word: '暴力', triggerCount: 18, categoryId: 2, creator: '管理员', createTime: '2026-01-11 11:00:00', modifier: '管理员', modifyTime: '2026-01-12 16:30:00' }
+                ],
+                3: [
+                    { id: 6, word: '赌博', triggerCount: 6, categoryId: 3, creator: '管理员', createTime: '2026-01-12 09:20:00', modifier: '管理员', modifyTime: '2026-01-12 09:20:00' },
+                    { id: 7, word: '诈骗', triggerCount: 22, categoryId: 3, creator: '管理员', createTime: '2026-01-13 14:10:00', modifier: '管理员', modifyTime: '2026-01-17 10:00:00' },
+                    { id: 8, word: '毒品', triggerCount: 3, categoryId: 3, creator: '管理员', createTime: '2026-01-13 14:10:00', modifier: '管理员', modifyTime: '2026-01-13 14:10:00' },
+                    { id: 9, word: '假药', triggerCount: 9, categoryId: 3, creator: '管理员', createTime: '2026-01-14 10:00:00', modifier: '管理员', modifyTime: '2026-01-14 10:00:00' }
+                ],
+                4: [
+                    { id: 10, word: '非法集资', triggerCount: 7, categoryId: 4, creator: '管理员', createTime: '2026-01-14 10:00:00', modifier: '管理员', modifyTime: '2026-01-18 11:30:00' }
+                ],
+                5: []
+            });
+
+            // 添加分类表单状态
+            const [addCategoryForm] = Form.useForm();
+            const [categorySensitiveWords, setCategorySensitiveWords] = useState('');
+            const [categoryScope, setCategoryScope] = useState([]);
+
+            // 添加敏感词表单状态
+            const [addWordForm] = Form.useForm();
+            const [wordSensitiveWords, setWordSensitiveWords] = useState('');
+            const [wordCategoryId, setWordCategoryId] = useState(null);
+
+            // 初始化选中第一个分类
+            useEffect(() => {
+                if (categories.length > 0 && !selectedCategory) {
+                    setSelectedCategory(categories[0]);
+                    setWordCategoryId(categories[0].id);
+                }
+            }, [categories]);
+
+            // 刷新图标
+            useEffect(() => {
+                setTimeout(() => {
+                    if (window.lucide) {
+                        window.lucide.createIcons();
+                    }
+                }, 100);
+            }, [hoveredCategoryId, addCategoryModalVisible, addSensitiveWordModalVisible]);
+
+            // 过滤分类列表
+            const filteredCategories = categories.filter(cat =>
+                cat.name.toLowerCase().includes(categorySearchKeyword.toLowerCase())
+            );
+
+            // 排序状态
+            const [sortField, setSortField] = useState('createTime');
+            const [sortOrder, setSortOrder] = useState('descend');
+
+            // 获取当前选中分类的敏感词列表（带排序）
+            const getSortedSensitiveWords = () => {
+                const words = selectedCategory ? (sensitiveWordsByCategory[selectedCategory.id] || []) : [];
+                return [...words].sort((a, b) => {
+                    let aVal = a[sortField];
+                    let bVal = b[sortField];
+                    if (sortField === 'createTime') {
+                        aVal = new Date(aVal).getTime();
+                        bVal = new Date(bVal).getTime();
+                    }
+                    if (sortOrder === 'ascend') {
+                        return aVal - bVal;
+                    } else {
+                        return bVal - aVal;
+                    }
+                });
+            };
+
+            const currentSensitiveWords = getSortedSensitiveWords();
+
+            // 获取分类下的敏感词数量
+            const getCategoryWordCount = (categoryId) => {
+                return sensitiveWordsByCategory[categoryId]?.length || 0;
+            };
+
+            // 表格列定义
+            const columns = [
+                {
+                    title: '敏感词',
+                    dataIndex: 'word',
+                    key: 'word',
+                    width: 200
+                },
+                {
+                    title: (
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+                            <span>触发次数</span>
+                            <div style={{ display: 'flex', flexDirection: 'column', cursor: 'pointer', lineHeight: 1 }}>
+                                <span
+                                    style={{
+                                        fontSize: '10px',
+                                        color: sortField === 'triggerCount' && sortOrder === 'ascend' ? '#1890ff' : '#bfbfbf',
+                                        marginBottom: '-2px'
+                                    }}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                setSortField('triggerCount');
+                setSortOrder('ascend');
+                                    }}
+                                >▲</span>
+                                <span
+                                    style={{
+                                        fontSize: '10px',
+                                        color: sortField === 'triggerCount' && sortOrder === 'descend' ? '#1890ff' : '#bfbfbf'
+                                    }}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                setSortField('triggerCount');
+                setSortOrder('descend');
+                                    }}
+                                >▼</span>
+                            </div>
+                        </div>
+                    ),
+                    dataIndex: 'triggerCount',
+                    key: 'triggerCount',
+                    width: 100,
+                    align: 'center'
+                },
+                {
+                    title: '创建人',
+                    dataIndex: 'creator',
+                    key: 'creator',
+                    width: 100
+                },
+                {
+                    title: (
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+                            <span>创建时间</span>
+                            <div style={{ display: 'flex', flexDirection: 'column', cursor: 'pointer', lineHeight: 1 }}>
+                                <span
+                                    style={{
+                                        fontSize: '10px',
+                                        color: sortField === 'createTime' && sortOrder === 'ascend' ? '#1890ff' : '#bfbfbf',
+                                        marginBottom: '-2px'
+                                    }}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                setSortField('createTime');
+                setSortOrder('ascend');
+                                    }}
+                                >▲</span>
+                                <span
+                                    style={{
+                                        fontSize: '10px',
+                                        color: sortField === 'createTime' && sortOrder === 'descend' ? '#1890ff' : '#bfbfbf'
+                                    }}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                setSortField('createTime');
+                setSortOrder('descend');
+                                    }}
+                                >▼</span>
+                            </div>
+                        </div>
+                    ),
+                    dataIndex: 'createTime',
+                    key: 'createTime',
+                    width: 180
+                },
+                {
+                    title: '修改人',
+                    dataIndex: 'modifier',
+                    key: 'modifier',
+                    width: 100
+                },
+                {
+                    title: '修改时间',
+                    dataIndex: 'modifyTime',
+                    key: 'modifyTime',
+                    width: 180
+                },
+                {
+                    title: '操作',
+                    key: 'action',
+                    width: 120,
+                    align: 'center',
+                    render: (_, record) => (
+                        <Space>
+                            <Button
+                                type="link"
+                                size="small"
+                                onClick={() => {
+                                    handleEditSensitiveWord(record);
+                                }}
+                                style={{ padding: '0 4px' }}
+                            >
+                                编辑
+                            </Button>
+                            <Popover
+                                content={
+                                    <div style={{ padding: '8px 0', minWidth: '200px' }}>
+                                        <div style={{ marginBottom: '12px', color: '#595959', fontSize: '14px' }}>
+                                            删除后将影响触发记录统计，且不可恢复。是否删除？
+                                        </div>
+                                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                                            <Button
+                                                size="small"
+                                                onClick={() => setDeletePopoverVisible({ ...deletePopoverVisible, [record.id]: false })}
+                                            >
+                                                取消
+                                            </Button>
+                                            <Button
+                                                size="small"
+                                                type="primary"
+                                                danger
+                                                onClick={() => {
+                                                    const newData = { ...sensitiveWordsByCategory };
+                                                    newData[record.categoryId] = newData[record.categoryId].filter(item => item.id !== record.id);
+                                                    setSensitiveWordsByCategory(newData);
+                                                    setDeletePopoverVisible({ ...deletePopoverVisible, [record.id]: false });
+                                                }}
+                                            >
+                                                删除
+                                            </Button>
+                                        </div>
+                                    </div>
+                                }
+                                title={null}
+                                trigger="click"
+                                open={deletePopoverVisible[record.id]}
+                                onOpenChange={(open) => setDeletePopoverVisible({ ...deletePopoverVisible, [record.id]: open })}
+                                placement="bottomRight"
+                            >
+                                <Button type="text" size="small" danger>
+                                    删除
+                                </Button>
+                            </Popover>
+                        </Space>
+                    )
+                }
+            ];
+
+            // 删除分类
+            const handleDeleteCategory = (categoryId) => {
+                setCategories(categories.filter(cat => cat.id !== categoryId));
+                const newData = { ...sensitiveWordsByCategory };
+                delete newData[categoryId];
+                setSensitiveWordsByCategory(newData);
+                if (selectedCategory && selectedCategory.id === categoryId) {
+                    setSelectedCategory(categories.length > 1 ? categories.find(c => c.id !== categoryId) : null);
+                }
+                setDeleteCategoryPopoverVisible(null);
+            };
+
+            // 编辑分类
+            const handleEditCategory = (category) => {
+                setEditingCategory(category);
+                addCategoryForm.setFieldsValue({ categoryName: category.name });
+                setCategorySensitiveWords('');
+                setCategoryScope(category.scope || []);
+                setAddCategoryModalVisible(true);
+            };
+
+            // 保存分类
+            const handleSaveCategory = () => {
+                addCategoryForm.validateFields().then(values => {
+                    const newId = editingCategory ? editingCategory.id : Math.max(...categories.map(c => c.id), 0) + 1;
+                    const scopeNames = categoryScope.length > 0 ? getScopeNames(categoryScope) : ['全公司'];
+                    const newCategory = {
+                        id: newId,
+                        name: values.categoryName,
+                        scope: categoryScope,
+                        scopeNames: scopeNames
+                    };
+
+                    if (editingCategory) {
+                        // 编辑模式
+                        setCategories(categories.map(cat => cat.id === newId ? newCategory : cat));
+                    } else {
+                        // 新增模式
+                        const words = categorySensitiveWords.split('\n').filter(w => w.trim());
+                        setCategories([...categories, newCategory]);
+                        setSensitiveWordsByCategory({
+                            ...sensitiveWordsByCategory,
+                            [newId]: words.map((word, index) => ({
+                                id: Date.now() + index,
+                                word: word,
+                                triggerCount: 0,
+                                categoryId: newId,
+                                creator: '管理员',
+                                createTime: new Date().toLocaleString('zh-CN').replace(/\//g, '-'),
+                                modifier: '管理员',
+                                modifyTime: new Date().toLocaleString('zh-CN').replace(/\//g, '-')
+                            }))
+                        });
+                        setSelectedCategory(newCategory);
+                    }
+
+                    setAddCategoryModalVisible(false);
+                    addCategoryForm.resetFields();
+                    setCategorySensitiveWords('');
+                    setCategoryScope([]);
+                    setEditingCategory(null);
+                });
+            };
+
+            // 获取适用范围名称
+            const getScopeNames = (scopeIds) => {
+                const names = [];
+                const findNames = (nodes, ids) => {
+                    nodes.forEach(node => {
+                        if (ids.includes(node.value)) {
+                            names.push(node.title);
+                        }
+                        if (node.children) {
+                            findNames(node.children, ids);
+                        }
+                    });
+                };
+                findNames(departmentTree, scopeIds);
+                return names;
+            };
+
+            // 保存敏感词
+            const handleSaveSensitiveWord = () => {
+                addWordForm.validateFields().then(values => {
+                    const categoryId = wordCategoryId;
+                    const now = new Date().toLocaleString('zh-CN').replace(/\//g, '-');
+
+                    if (editingSensitiveWord) {
+                        // 编辑模式 - 单行文本
+                        const newData = { ...sensitiveWordsByCategory };
+                        const list = newData[categoryId].map(item => {
+                            if (item.id === editingSensitiveWord.id) {
+                                return {
+                                    ...item,
+                                    word: wordSensitiveWords,
+                                    modifier: '管理员',
+                                    modifyTime: now
+                                };
+                            }
+                            return item;
+                        });
+                        newData[categoryId] = list;
+                        setSensitiveWordsByCategory(newData);
+                    } else {
+                        // 新增模式 - 多行文本，每个回车分隔的词为一条记录
+                        const existingWords = sensitiveWordsByCategory[categoryId] || [];
+                        const words = wordSensitiveWords.split('\n').filter(w => w.trim());
+                        const newWords = words.map((word, index) => ({
+                            id: Date.now() + index,
+                            word: word,
+                            triggerCount: 0,
+                            categoryId: categoryId,
+                            creator: '管理员',
+                            createTime: now,
+                            modifier: '管理员',
+                            modifyTime: now
+                        }));
+                        setSensitiveWordsByCategory({
+                            ...sensitiveWordsByCategory,
+                            [categoryId]: [...existingWords, ...newWords]
+                        });
+                    }
+
+                    setAddSensitiveWordModalVisible(false);
+                    addWordForm.resetFields();
+                    setWordSensitiveWords('');
+                    setEditingSensitiveWord(null);
+                });
+            };
+
+            // 打开添加敏感词弹窗
+            const openAddWordModal = () => {
+                setEditingSensitiveWord(null);
+                setWordSensitiveWords('');
+                setWordCategoryId(selectedCategory?.id);
+                // 设置表单初始值
+                setTimeout(() => {
+                    addWordForm.setFieldsValue({ wordCategory: selectedCategory?.id });
+                }, 0);
+                setAddSensitiveWordModalVisible(true);
+            };
+
+            // 编辑敏感词
+            const handleEditSensitiveWord = (record) => {
+                setEditingSensitiveWord(record);
+                setWordSensitiveWords(record.word);
+                setWordCategoryId(record.categoryId);
+                // 设置表单初始值
+                setTimeout(() => {
+                    addWordForm.setFieldsValue({ wordCategory: record.categoryId });
+                }, 0);
+                setAddSensitiveWordModalVisible(true);
+            };
+
+            // 获取当前分类的适用范围
+            const getCurrentScopeNames = () => {
+                if (!selectedCategory) return '全公司';
+                return selectedCategory.scopeNames?.join('、') || '全公司';
+            };
+
+            // 打开添加分类弹窗
+            const openAddCategoryModal = () => {
+                setEditingCategory(null);
+                addCategoryForm.resetFields();
+                setCategorySensitiveWords('');
+                setCategoryScope([]);
+                setAddCategoryModalVisible(true);
+            };
+
+            return (
+                <div className="content-card" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                    <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '12px', color: '#262626' }}>
+                        敏感词设置
+                    </h2>
+
+                    {/* 主内容区 - 左右布局 */}
+                    <div style={{ display: 'flex', gap: '16px', flex: 1, overflow: 'hidden' }}>
+                        {/* 左侧敏感词分类栏 */}
+                        <div style={{
+                            width: '260px',
+                            flexShrink: 0,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            background: '#fff',
+                            border: '1px solid #f0f0f0',
+                            borderRadius: '4px'
+                        }}>
+                            {/* 搜索框和新建按钮 */}
+                            <div style={{ padding: '12px', borderBottom: '1px solid #f0f0f0', display: 'flex', gap: '8px' }}>
+                                <Input
+                                    placeholder="搜索分类名称"
+                                    value={categorySearchKeyword}
+                                    onChange={(e) => setCategorySearchKeyword(e.target.value)}
+                                    style={{ flex: 1 }}
+                                    allowClear
+                                />
+                                <Button
+                                    type="primary"
+                                    icon={<i data-lucide="plus" style={{ width: '14px', height: '14px' }}></i>}
+                                    style={{ width: '32px', height: '32px', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                    onClick={openAddCategoryModal}
+                                />
+                            </div>
+
+                            {/* 分类列表 */}
+                            <div style={{ flex: 1, overflowY: 'auto' }}>
+                                {filteredCategories.map(category => (
+                                    <div
+                                        key={category.id}
+                                        onClick={() => {
+                                            setSelectedCategory(category);
+                                            setWordCategoryId(category.id);
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            setHoveredCategoryId(category.id);
+                                            e.currentTarget.style.backgroundColor = selectedCategory && selectedCategory.id === category.id ? '#e6f7ff' : '#f5f5f5';
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            setHoveredCategoryId(null);
+                                            e.currentTarget.style.backgroundColor = selectedCategory && selectedCategory.id === category.id ? '#e6f7ff' : 'transparent';
+                                        }}
+                                        style={{
+                                            padding: '10px 12px',
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            justifyContent: 'space-between',
+                                            alignItems: 'center',
+                                            backgroundColor: selectedCategory && selectedCategory.id === category.id ? '#e6f7ff' : 'transparent',
+                                            borderLeft: selectedCategory && selectedCategory.id === category.id ? '2px solid #1890ff' : '2px solid transparent',
+                                            transition: 'all 0.2s'
+                                        }}
+                                    >
+                                        <span style={{ fontSize: '14px', color: '#333' }}>
+                                            {category.name}
+                                            <span style={{ marginLeft: '8px', color: '#8c8c8c', fontSize: '12px' }}>
+                                                ({getCategoryWordCount(category.id)})
+                                            </span>
+                                        </span>
+                                        {hoveredCategoryId === category.id && (
+                                            <Space size={2} onClick={(e) => e.stopPropagation()}>
+                                                <Button
+                                                    type="text"
+                                                    size="small"
+                                                    icon={<i data-lucide="pencil" style={{ width: '14px', height: '14px' }}></i>}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleEditCategory(category);
+                                                    }}
+                                                    style={{ color: '#1890ff' }}
+                                                />
+                                                <Popover
+                                                    content={
+                                                        <div style={{ padding: '8px 0', minWidth: '200px' }}>
+                                                            <div style={{ marginBottom: '12px', color: '#595959', fontSize: '14px' }}>
+                                                                删除后将影响触发记录统计，且不可恢复。是否删除？
+                                                            </div>
+                                                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                                                                <Button
+                                                                    size="small"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        setDeleteCategoryPopoverVisible(null);
+                                                                    }}
+                                                                >
+                                                                    取消
+                                                                </Button>
+                                                                <Button
+                                                                    size="small"
+                                                                    type="primary"
+                                                                    danger
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        handleDeleteCategory(category.id);
+                                                                    }}
+                                                                >
+                                                                    删除
+                                                                </Button>
+                                                            </div>
+                                                        </div>
+                                                    }
+                                                    title={null}
+                                                    trigger="click"
+                                                    open={deleteCategoryPopoverVisible === category.id}
+                                                    onOpenChange={(open) => {
+                                                        if (open) {
+                                                            setDeleteCategoryPopoverVisible(category.id);
+                                                        } else {
+                                                            setDeleteCategoryPopoverVisible(null);
+                                                        }
+                                                    }}
+                                                    placement="right"
+                                                >
+                                                    <Button
+                                                        type="text"
+                                                        size="small"
+                                                        danger
+                                                        icon={<i data-lucide="trash-2" style={{ width: '14px', height: '14px' }}></i>}
+                                                    />
+                                                </Popover>
+                                            </Space>
+                                        )}
+                                    </div>
+                                ))}
+                                {filteredCategories.length === 0 && (
+                                    <div style={{ padding: '20px', textAlign: 'center', color: '#8c8c8c', fontSize: '14px' }}>
+                                        暂无分类
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* 右侧敏感词列表栏 */}
+                        <div style={{
+                            flex: 1,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            background: '#fff',
+                            border: '1px solid #f0f0f0',
+                            borderRadius: '4px',
+                            overflow: 'hidden'
+                        }}>
+                            {/* 顶部描述信息和添加按钮 */}
+                            <div style={{
+                                padding: '12px 16px',
+                                borderBottom: '1px solid #f0f0f0',
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                flexWrap: 'wrap',
+                                gap: '8px'
+                            }}>
+                                <div style={{ fontSize: '14px', color: '#595959' }}>
+                                    适用范围：<span style={{ color: '#1890ff' }}>{getCurrentScopeNames()}</span>
+                                </div>
+                                <Button
+                                    type="primary"
+                                    icon={<i data-lucide="plus" style={{ width: '14px', height: '14px' }}></i>}
+                                    onClick={openAddWordModal}
+                                    disabled={!selectedCategory}
+                                >
+                                    添加敏感词
+                                </Button>
+                            </div>
+
+                            {/* 列表区域 */}
+                            <div style={{ flex: 1, overflow: 'hidden', padding: '0' }}>
+                                <Table
+                                    columns={columns}
+                                    dataSource={currentSensitiveWords}
+                                    rowKey="id"
+                                    pagination={{
+                                        total: currentSensitiveWords.length,
+                                        pageSize: 10,
+                                        showSizeChanger: true,
+                                        showTotal: (total) => `共 ${total} 条`,
+                                        showQuickJumper: true
+                                    }}
+                                    scroll={{ y: 'calc(100vh - 280px)' }}
+                                    style={{ height: '100%' }}
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* 添加/编辑分类弹窗 */}
+                    <Modal
+                        title={editingCategory ? '编辑敏感词分类' : '添加敏感词分类'}
+                        open={addCategoryModalVisible}
+                        onCancel={() => {
+                            setAddCategoryModalVisible(false);
+                            addCategoryForm.resetFields();
+                            setCategorySensitiveWords('');
+                            setCategoryScope([]);
+                            setEditingCategory(null);
+                        }}
+                        footer={
+                            <div style={{ textAlign: 'right' }}>
+                                <Space>
+                                    <Button onClick={() => {
+                                        setAddCategoryModalVisible(false);
+                                        addCategoryForm.resetFields();
+                                        setCategorySensitiveWords('');
+                                        setCategoryScope([]);
+                                        setEditingCategory(null);
+                                    }}>
+                                        关闭
+                                    </Button>
+                                    <Button type="primary" onClick={handleSaveCategory}>
+                                        保存
+                                    </Button>
+                                </Space>
+                            </div>
+                        }
+                        width={600}
+                    >
+                        <Form form={addCategoryForm} layout="vertical">
+                            <Form.Item
+                                name="categoryName"
+                                label="分类名称"
+                                rules={[{ required: true, message: '请输入分类名称' }, { max: 20, message: '最多输入20个字符' }]}
+                            >
+                                <Input placeholder="请输入分类名称，最多20字" maxLength={20} showCount />
+                            </Form.Item>
+                            {!editingCategory && (
+                                <Form.Item label="敏感词">
+                                    <TextArea
+                                        placeholder="支持添加多个敏感词，用回车键隔开"
+                                        rows={4}
+                                        maxLength={2000}
+                                        value={categorySensitiveWords}
+                                        onChange={(e) => setCategorySensitiveWords(e.target.value)}
+                                        showCount
+                                    />
+                                </Form.Item>
+                            )}
+                            <Form.Item label="适用范围">
+                                <TreeSelect
+                                    treeData={departmentTree}
+                                    value={categoryScope}
+                                    onChange={setCategoryScope}
+                                    treeCheckable
+                                    showCheckedStrategy={TreeSelect.SHOW_CHILD}
+                                    placeholder="请选择部门或员工"
+                                    style={{ width: '100%' }}
+                                    allowClear
+                                    treeNodeFilterProp="title"
+                                />
+                                <div style={{ marginTop: '4px', fontSize: '12px', color: '#8c8c8c' }}>
+                                    不选择则默认为全公司适用
+                                </div>
+                            </Form.Item>
+                        </Form>
+                    </Modal>
+
+                    {/* 添加/编辑敏感词弹窗 */}
+                    <Modal
+                        title={editingSensitiveWord ? '编辑敏感词' : '添加敏感词'}
+                        open={addSensitiveWordModalVisible}
+                        onCancel={() => {
+                            setAddSensitiveWordModalVisible(false);
+                            addWordForm.resetFields();
+                            setWordSensitiveWords('');
+                            setEditingSensitiveWord(null);
+                        }}
+                        footer={
+                            <div style={{ textAlign: 'right' }}>
+                                <Space>
+                                    <Button onClick={() => {
+                                        setAddSensitiveWordModalVisible(false);
+                                        addWordForm.resetFields();
+                                        setWordSensitiveWords('');
+                                        setEditingSensitiveWord(null);
+                                    }}>
+                                        关闭
+                                    </Button>
+                                    <Button type="primary" onClick={handleSaveSensitiveWord} disabled={!wordSensitiveWords.trim() || !wordCategoryId}>
+                                        保存
+                                    </Button>
+                                </Space>
+                            </div>
+                        }
+                        width={500}
+                    >
+                        <Form form={addWordForm} layout="vertical">
+                            <Form.Item
+                                name="wordCategory"
+                                label="分类名称"
+                                rules={[{ required: true, message: '请选择分类' }]}
+                            >
+                                <Select
+                                    value={wordCategoryId}
+                                    onChange={setWordCategoryId}
+                                    placeholder="请选择分类"
+                                >
+                                    {categories.map(cat => (
+                                        <Option key={cat.id} value={cat.id}>{cat.name}</Option>
+                                    ))}
+                                </Select>
+                            </Form.Item>
+                            <Form.Item
+                                label="敏感词"
+                                required
+                            >
+                                {editingSensitiveWord ? (
+                                    <Input
+                                        placeholder="请输入敏感词"
+                                        value={wordSensitiveWords}
+                                        onChange={(e) => setWordSensitiveWords(e.target.value)}
+                                        maxLength={100}
+                                    />
+                                ) : (
+                                    <TextArea
+                                        placeholder="支持添加多个敏感词，用回车键隔开"
+                                        rows={4}
+                                        maxLength={2000}
+                                        value={wordSensitiveWords}
+                                        onChange={(e) => setWordSensitiveWords(e.target.value)}
+                                        showCount
+                                    />
+                                )}
+                            </Form.Item>
+                        </Form>
+                    </Modal>
+                </div>
+            );
+        };
+
+        // 敏感行为设置组件
+        const SensitiveBehaviorSettings = () => {
+            const [searchKeyword, setSearchKeyword] = useState('');
+            const [addModalVisible, setAddModalVisible] = useState(false);
+            const [editRecord, setEditRecord] = useState(null);
+            const [deletePopoverVisible, setDeletePopoverVisible] = useState({});
+
+            // 敏感行为规则数据
+            const [rules, setRules] = useState([
+                {
+                    id: 1,
+                    name: '核心敏感行为规则',
+                    behaviors: ['employee_delete_customer', 'employee_recall_message'],
+                    scope: ['dept1-1-1', 'dept1-2'],
+                    scopeNames: ['销售一组', '技术部'],
+                    creator: '管理员',
+                    createTime: '2026-01-10 10:30:00',
+                    modifier: '管理员',
+                    modifyTime: '2026-01-15 14:20:00'
+                },
+                {
+                    id: 2,
+                    name: '文件传输管控规则',
+                    behaviors: ['employee_send_file'],
+                    scope: ['dept1'],
+                    scopeNames: ['全公司'],
+                    creator: '管理员',
+                    createTime: '2026-01-11 11:00:00',
+                    modifier: '管理员',
+                    modifyTime: '2026-01-12 16:30:00'
+                },
+                {
+                    id: 3,
+                    name: '红包资金监控规则',
+                    behaviors: ['employee_send_redpack', 'employee_receive_redpack'],
+                    scope: ['dept1-1'],
+                    scopeNames: ['销售部'],
+                    creator: '管理员',
+                    createTime: '2026-01-12 09:20:00',
+                    modifier: '管理员',
+                    modifyTime: '2026-01-17 10:00:00'
+                },
+                {
+                    id: 4,
+                    name: '消息撤回审计规则',
+                    behaviors: ['employee_recall_message'],
+                    scope: ['dept1'],
+                    scopeNames: ['全公司'],
+                    creator: '管理员',
+                    createTime: '2026-01-14 10:00:00',
+                    modifier: '管理员',
+                    modifyTime: '2026-01-18 11:30:00'
+                },
+                {
+                    id: 5,
+                    name: '全行为监控规则',
+                    behaviors: ['employee_delete_customer', 'employee_recall_message', 'employee_send_file', 'employee_send_redpack', 'employee_receive_redpack'],
+                    scope: [],
+                    scopeNames: ['全公司'],
+                    creator: '管理员',
+                    createTime: '2026-01-15 14:00:00',
+                    modifier: '管理员',
+                    modifyTime: '2026-01-15 14:00:00'
+                }
+            ]);
+
+            // 敏感行为选项
+            const behaviorOptions = [
+                { value: 'employee_delete_customer', label: '员工删除客户' },
+                { value: 'employee_recall_message', label: '员工撤回消息' },
+                { value: 'employee_send_file', label: '员工发送文件' },
+                { value: 'employee_send_redpack', label: '员工发送红包' },
+                { value: 'employee_receive_redpack', label: '员工接收红包' }
+            ];
+
+            // 组织架构树 - 支持同时选部门和人员
+            const [departmentTree] = useState([
+                {
+                    title: '全公司',
+                    value: 'dept1',
+                    key: 'dept1',
+                    children: [
+                        {
+                            title: '销售部',
+                            value: 'dept1-1',
+                            key: 'dept1-1',
+                            children: [
+                                { title: '销售一组', value: 'dept1-1-1', key: 'dept1-1-1', children: [
+                                    { title: '李想', value: 'emp1', key: 'emp1', isLeaf: true },
+                                    { title: '王伟军', value: 'emp2', key: 'emp2', isLeaf: true }
+                                ]},
+                                { title: '销售二组', value: 'dept1-1-2', key: 'dept1-1-2', children: [
+                                    { title: '毛奇', value: 'emp3', key: 'emp3', isLeaf: true },
+                                    { title: '谢丽', value: 'emp4', key: 'emp4', isLeaf: true }
+                                ]}
+                            ]
+                        },
+                        {
+                            title: '技术部',
+                            value: 'dept1-2',
+                            key: 'dept1-2',
+                            children: [
+                                { title: '研发组', value: 'dept1-2-1', key: 'dept1-2-1', children: [
+                                    { title: '周杰', value: 'emp5', key: 'emp5', isLeaf: true }
+                                ]},
+                                { title: '测试组', value: 'dept1-2-2', key: 'dept1-2-2', children: [
+                                    { title: '陈明', value: 'emp6', key: 'emp6', isLeaf: true }
+                                ]}
+                            ]
+                        },
+                        { title: '客服部', value: 'dept1-3', key: 'dept1-3', children: [
+                            { title: '赵敏', value: 'emp7', key: 'emp7', isLeaf: true }
+                        ]},
+                        { title: '财务部', value: 'dept1-4', key: 'dept1-4', children: [
+                            { title: '钱刚', value: 'emp8', key: 'emp8', isLeaf: true }
+                        ]}
+                    ]
+                }
+            ]);
+
+            // 表单状态
+            const [form] = Form.useForm();
+            const [formValues, setFormValues] = useState({
+                name: '',
+                behaviors: [],
+                scope: []
+            });
+
+            // 刷新图标
+            useEffect(() => {
+                setTimeout(() => {
+                    if (window.lucide) {
+                        window.lucide.createIcons();
+                    }
+                }, 100);
+            }, [addModalVisible, deletePopoverVisible]);
+
+            // 过滤规则列表
+            const filteredRules = rules.filter(rule =>
+                rule.name.toLowerCase().includes(searchKeyword.toLowerCase())
+            );
+
+            // 格式化敏感行为显示
+            const formatBehaviors = (behaviorValues) => {
+                return behaviorValues.map(val => {
+                    const option = behaviorOptions.find(opt => opt.value === val);
+                    return option ? option.label : val;
+                }).join('、');
+            };
+
+            // 表格列定义
+            const columns = [
+                {
+                    title: '规则名称',
+                    dataIndex: 'name',
+                    key: 'name',
+                    width: 200
+                },
+                {
+                    title: '敏感行为',
+                    dataIndex: 'behaviors',
+                    key: 'behaviors',
+                    width: 280,
+                    render: (behaviors) => (
+                        <div style={{ color: '#595959' }}>
+                            {formatBehaviors(behaviors)}
+                        </div>
+                    )
+                },
+                {
+                    title: '适用范围',
+                    dataIndex: 'scopeNames',
+                    key: 'scopeNames',
+                    width: 180,
+                    render: (scopeNames) => (
+                        <span style={{ color: '#1890ff' }}>
+                            {scopeNames.join('、')}
+                        </span>
+                    )
+                },
+                {
+                    title: '创建人',
+                    dataIndex: 'creator',
+                    key: 'creator',
+                    width: 100
+                },
+                {
+                    title: '创建时间',
+                    dataIndex: 'createTime',
+                    key: 'createTime',
+                    width: 180
+                },
+                {
+                    title: '修改人',
+                    dataIndex: 'modifier',
+                    key: 'modifier',
+                    width: 100
+                },
+                {
+                    title: '修改时间',
+                    dataIndex: 'modifyTime',
+                    key: 'modifyTime',
+                    width: 180
+                },
+                {
+                    title: '操作',
+                    key: 'action',
+                    width: 120,
+                    align: 'center',
+                    render: (_, record) => (
+                        <Space>
+                            <Button
+                                type="link"
+                                size="small"
+                                onClick={() => {
+                                    setEditRecord(record);
+                                    setFormValues({
+                                        name: record.name,
+                                        behaviors: record.behaviors,
+                                        scope: record.scope
+                                    });
+                                    form.setFieldsValue({
+                                        name: record.name,
+                                        behaviors: record.behaviors,
+                                        scope: record.scope
+                                    });
+                                    setAddModalVisible(true);
+                                }}
+                                style={{ padding: '0 4px' }}
+                            >
+                                编辑
+                            </Button>
+                            <Popover
+                                content={
+                                    <div style={{ padding: '8px 0', minWidth: '200px' }}>
+                                        <div style={{ marginBottom: '12px', color: '#595959', fontSize: '14px' }}>
+                                            删除后将无法恢复，是否确定删除？
+                                        </div>
+                                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                                            <Button
+                                                size="small"
+                                                onClick={() => setDeletePopoverVisible({ ...deletePopoverVisible, [record.id]: false })}
+                                            >
+                                                取消
+                                            </Button>
+                                            <Button
+                                                size="small"
+                                                type="primary"
+                                                danger
+                                                onClick={() => {
+                                                    setRules(rules.filter(item => item.id !== record.id));
+                                                    setDeletePopoverVisible({ ...deletePopoverVisible, [record.id]: false });
+                                                }}
+                                            >
+                                                删除
+                                            </Button>
+                                        </div>
+                                    </div>
+                                }
+                                title={null}
+                                trigger="click"
+                                open={deletePopoverVisible[record.id]}
+                                onOpenChange={(open) => setDeletePopoverVisible({ ...deletePopoverVisible, [record.id]: open })}
+                                placement="bottomRight"
+                            >
+                                <Button type="text" size="small" danger>
+                                    删除
+                                </Button>
+                            </Popover>
+                        </Space>
+                    )
+                }
+            ];
+
+            // 打开新增弹窗
+            const openAddModal = () => {
+                setEditRecord(null);
+                setFormValues({ name: '', behaviors: [], scope: [] });
+                form.resetFields();
+                // 显式设置空值，确保新建时每个字段默认为空
+                setTimeout(() => {
+                    form.setFieldsValue({
+                        name: '',
+                        behaviors: [],
+                        scope: []
+                    });
+                }, 0);
+                setAddModalVisible(true);
+            };
+
+            // 提交表单
+            const handleSubmit = async () => {
+                try {
+                    const values = await form.validateFields();
+                    if (editRecord) {
+                        // 编辑模式
+                        setRules(rules.map(item =>
+                            item.id === editRecord.id
+                                ? {
+                                    ...item,
+                                    name: values.name,
+                                    behaviors: values.behaviors,
+                                    scope: values.scope,
+                                    scopeNames: getScopeNames(values.scope),
+                                    modifier: '管理员',
+                                    modifyTime: new Date().toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }).replace(/\//g, '-')
+                                }
+                                : item
+                        ));
+                        message.success('修改成功');
+                    } else {
+                        // 新增模式
+                        const newRule = {
+                            id: Date.now(),
+                            name: values.name,
+                            behaviors: values.behaviors,
+                            scope: values.scope,
+                            scopeNames: getScopeNames(values.scope),
+                            creator: '管理员',
+                            createTime: new Date().toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }).replace(/\//g, '-'),
+                            modifier: '管理员',
+                            modifyTime: new Date().toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }).replace(/\//g, '-')
+                        };
+                        setRules([...rules, newRule]);
+                        message.success('新增成功');
+                    }
+                    setAddModalVisible(false);
+                } catch (error) {
+                    console.error('表单验证失败:', error);
+                }
+            };
+
+            // 根据选中的scope获取名称
+            const getScopeNames = (scopeValues) => {
+                const names = [];
+                const findNames = (nodes, values) => {
+                    nodes.forEach(node => {
+                        if (values.includes(node.value)) {
+                            names.push(node.title);
+                        }
+                        if (node.children) {
+                            findNames(node.children, values);
+                        }
+                    });
+                };
+                findNames(departmentTree, scopeValues || []);
+                return names;
+            };
+
+            return (
+                <div className="content-card">
+                    <div className="fixed-header">
+                        <h1 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '12px', color: '#262626' }}>
+                            敏感行为设置
+                        </h1>
+                    </div>
+
+                    {/* 搜索筛选区域 */}
+                    <div className="search-section">
+                        <div className="search-left">
+                            <Input
+                                placeholder="请输入规则名称"
+                                value={searchKeyword}
+                                onChange={(e) => setSearchKeyword(e.target.value)}
+                                style={{ width: 240 }}
+                                prefix={<i data-lucide="search" style={{ width: '14px', height: '14px', color: '#999' }}></i>}
+                                allowClear
+                            />
+                        </div>
+                        <div className="search-right">
+                            <Button
+                                type="primary"
+                                icon={<i data-lucide="plus" style={{ width: '14px', height: '14px' }}></i>}
+                                onClick={openAddModal}
+                            >
+                                新建敏感行为
+                            </Button>
+                        </div>
+                    </div>
+
+                    {/* 表格 */}
+                    <Table
+                        columns={columns}
+                        dataSource={filteredRules}
+                        rowKey="id"
+                        pagination={{
+                            total: filteredRules.length,
+                            pageSize: 10,
+                            showSizeChanger: true,
+                            showTotal: (total) => `共 ${total} 条`,
+                            showQuickJumper: true
+                        }}
+                        scroll={{ x: 1200 }}
+                    />
+
+                    {/* 新建/编辑弹窗 */}
+                    <Modal
+                        title={editRecord ? '编辑敏感行为' : '新建敏感行为'}
+                        open={addModalVisible}
+                        onOk={handleSubmit}
+                        onCancel={() => setAddModalVisible(false)}
+                        okText="确定"
+                        cancelText="取消"
+                        width={560}
+                    >
+                        <Form
+                            form={form}
+                            layout="vertical"
+                            initialValues={formValues}
+                        >
+                            <Form.Item
+                                name="name"
+                                label="规则名称"
+                                rules={[{ required: true, message: '请输入规则名称' }]}
+                            >
+                                <Input placeholder="请输入规则名称" maxLength={20} showCount />
+                            </Form.Item>
+                            <Form.Item
+                                name="behaviors"
+                                label="敏感行为"
+                                rules={[{ required: true, message: '请选择至少一种敏感行为' }]}
+                            >
+                                <Checkbox.Group options={behaviorOptions} />
+                            </Form.Item>
+                            <Form.Item
+                                name="scope"
+                                label="适用范围"
+                            >
+                                <TreeSelect
+                                    treeData={departmentTree}
+                                    treeCheckable
+                                    showCheckedStrategy={TreeSelect.SHOW_CHILD}
+                                    placeholder="请选择适用范围"
+                                    style={{ width: '100%' }}
+                                    dropdownStyle={{ maxHeight: 400, overflow: 'auto' }}
+                                />
+                                <div style={{ color: '#999', fontSize: '12px', marginTop: '4px' }}>
+                                    不选择则默认为全公司适用
+                                </div>
+                            </Form.Item>
+                        </Form>
+                    </Modal>
+                </div>
+            );
+        };
+
+        // 内容拦截设置组件
+        const ContentBlockSettings = () => {
+            const [searchKeyword, setSearchKeyword] = useState('');
+            const [behaviorFilter, setBehaviorFilter] = useState('all');
+            const [blockMethodFilter, setBlockMethodFilter] = useState('all');
+            const [addModalVisible, setAddModalVisible] = useState(false);
+            const [editRecord, setEditRecord] = useState(null);
+            const [deletePopoverVisible, setDeletePopoverVisible] = useState({});
+
+            // 拦截行为选项
+            const behaviorOptions = [
+                { value: 'all', label: '全部' },
+                { value: 'employee_send_phone', label: '员工发送手机号' },
+                { value: 'employee_send_email', label: '员工发送邮箱' },
+                { value: 'employee_send_receive_redpack', label: '员工发送和接收红包' }
+            ];
+
+            // 拦截方式选项
+            const blockMethodOptions = [
+                { value: 'all', label: '全部' },
+                { value: 'warning', label: '警告' },
+                { value: 'warning_and_block', label: '警告并拦截' }
+            ];
+
+            // 内容拦截规则数据
+            const [rules, setRules] = useState([
+                {
+                    id: 1,
+                    name: '个人信息保护规则',
+                    sensitiveWords: ['手机号', '身份证', '银行卡'],
+                    behaviors: ['employee_send_phone'],
+                    blockMethod: 'warning_and_block',
+                    scope: ['dept1-1-1', 'dept1-2'],
+                    scopeNames: ['销售一组', '技术部'],
+                    creator: '管理员',
+                    createTime: '2026-01-10 10:30:00',
+                    modifier: '管理员',
+                    modifyTime: '2026-01-15 14:20:00'
+                },
+                {
+                    id: 2,
+                    name: '邮箱泄露防护规则',
+                    sensitiveWords: ['邮箱', 'E-mail', '邮件地址'],
+                    behaviors: ['employee_send_email'],
+                    blockMethod: 'warning',
+                    scope: ['dept1'],
+                    scopeNames: ['全公司'],
+                    creator: '管理员',
+                    createTime: '2026-01-11 11:00:00',
+                    modifier: '管理员',
+                    modifyTime: '2026-01-12 16:30:00'
+                },
+                {
+                    id: 3,
+                    name: '红包资金监控规则',
+                    sensitiveWords: ['红包', '转账', '金额'],
+                    behaviors: ['employee_send_receive_redpack'],
+                    blockMethod: 'warning_and_block',
+                    scope: ['dept1-1'],
+                    scopeNames: ['销售部'],
+                    creator: '管理员',
+                    createTime: '2026-01-12 09:20:00',
+                    modifier: '管理员',
+                    modifyTime: '2026-01-17 10:00:00'
+                },
+                {
+                    id: 4,
+                    name: '综合内容审计规则',
+                    sensitiveWords: ['密码', '验证码', 'OTP'],
+                    behaviors: ['employee_send_phone', 'employee_send_email'],
+                    blockMethod: 'warning_and_block',
+                    scope: ['dept1'],
+                    scopeNames: ['全公司'],
+                    creator: '管理员',
+                    createTime: '2026-01-14 10:00:00',
+                    modifier: '管理员',
+                    modifyTime: '2026-01-18 11:30:00'
+                },
+                {
+                    id: 5,
+                    name: '全面内容管控规则',
+                    sensitiveWords: ['手机号', '身份证', '银行卡', '密码', '验证码', '邮箱', 'E-mail', '红包', '转账', '金额', 'OTP', '银行账号'],
+                    behaviors: ['employee_send_phone', 'employee_send_email', 'employee_send_receive_redpack'],
+                    blockMethod: 'warning_and_block',
+                    scope: ['dept1-1', 'dept1-1-1', 'dept1-2', 'dept1-3', 'emp7'],
+                    scopeNames: ['销售部', '销售一组', '技术部', '客服部', '赵敏'],
+                    creator: '管理员',
+                    createTime: '2026-01-15 16:00:00',
+                    modifier: '管理员',
+                    modifyTime: '2026-01-15 16:00:00'
+                }
+            ]);
+
+            // 组织架构树
+            const [departmentTree] = useState([
+                {
+                    title: '全公司',
+                    value: 'dept1',
+                    key: 'dept1',
+                    children: [
+                        {
+                            title: '销售部',
+                            value: 'dept1-1',
+                            key: 'dept1-1',
+                            children: [
+                                { title: '销售一组', value: 'dept1-1-1', key: 'dept1-1-1', children: [
+                                    { title: '李想', value: 'emp1', key: 'emp1', isLeaf: true },
+                                    { title: '王伟军', value: 'emp2', key: 'emp2', isLeaf: true }
+                                ]},
+                                { title: '销售二组', value: 'dept1-1-2', key: 'dept1-1-2', children: [
+                                    { title: '毛奇', value: 'emp3', key: 'emp3', isLeaf: true },
+                                    { title: '谢丽', value: 'emp4', key: 'emp4', isLeaf: true }
+                                ]}
+                            ]
+                        },
+                        {
+                            title: '技术部',
+                            value: 'dept1-2',
+                            key: 'dept1-2',
+                            children: [
+                                { title: '研发组', value: 'dept1-2-1', key: 'dept1-2-1', children: [
+                                    { title: '周杰', value: 'emp5', key: 'emp5', isLeaf: true }
+                                ]},
+                                { title: '测试组', value: 'dept1-2-2', key: 'dept1-2-2', children: [
+                                    { title: '陈明', value: 'emp6', key: 'emp6', isLeaf: true }
+                                ]}
+                            ]
+                        },
+                        { title: '客服部', value: 'dept1-3', key: 'dept1-3', children: [
+                            { title: '赵敏', value: 'emp7', key: 'emp7', isLeaf: true }
+                        ]},
+                        { title: '财务部', value: 'dept1-4', key: 'dept1-4', children: [
+                            { title: '钱刚', value: 'emp8', key: 'emp8', isLeaf: true }
+                        ]}
+                    ]
+                }
+            ]);
+
+            // 表单状态
+            const [form] = Form.useForm();
+            const [formValues, setFormValues] = useState({
+                name: '',
+                sensitiveWords: '',
+                behaviors: [],
+                blockMethod: 'warning',
+                scope: []
+            });
+
+            // 刷新图标
+            useEffect(() => {
+                setTimeout(() => {
+                    if (window.lucide) {
+                        window.lucide.createIcons();
+                    }
+                }, 100);
+            }, [addModalVisible, deletePopoverVisible]);
+
+            // 过滤规则列表
+            const filteredRules = rules.filter(rule => {
+                // 搜索规则名称或敏感词
+                const matchSearch = searchKeyword === '' ||
+                    rule.name.toLowerCase().includes(searchKeyword.toLowerCase()) ||
+                    rule.sensitiveWords.some(word => word.toLowerCase().includes(searchKeyword.toLowerCase()));
+                
+                // 拦截行为筛选
+                const matchBehavior = behaviorFilter === 'all' || rule.behaviors.includes(behaviorFilter);
+                
+                // 拦截方式筛选
+                const matchBlockMethod = blockMethodFilter === 'all' || rule.blockMethod === blockMethodFilter;
+                
+                return matchSearch && matchBehavior && matchBlockMethod;
+            });
+
+            // 格式化敏感行为显示
+            const formatBehaviors = (behaviorValues) => {
+                const behaviorLabels = {
+                    'employee_send_phone': '员工发送手机号',
+                    'employee_send_email': '员工发送邮箱',
+                    'employee_send_receive_redpack': '员工发送和接收红包'
+                };
+                return behaviorValues.map(val => behaviorLabels[val] || val).join('、');
+            };
+
+            // 格式化拦截方式显示
+            const formatBlockMethod = (method) => {
+                const labels = {
+                    'warning': '警告',
+                    'warning_and_block': '警告并拦截'
+                };
+                return labels[method] || method;
+            };
+
+            // 表格列定义
+            const columns = [
+                {
+                    title: '规则名称',
+                    dataIndex: 'name',
+                    key: 'name',
+                    width: 180
+                },
+                {
+                    title: '敏感词',
+                    dataIndex: 'sensitiveWords',
+                    key: 'sensitiveWords',
+                    width: 200,
+                    ellipsis: true,
+                    render: (words) => (
+                        <Popover content={<div style={{ maxWidth: 300, wordBreak: 'break-all' }}>{words.join('、')}</div>} trigger="hover" placement="top">
+                            <div style={{ color: '#595959', cursor: 'pointer', overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', lineHeight: '20px' }}>
+                                {words.join('、')}
+                            </div>
+                        </Popover>
+                    )
+                },
+                {
+                    title: '敏感行为',
+                    dataIndex: 'behaviors',
+                    key: 'behaviors',
+                    width: 220,
+                    render: (behaviors) => (
+                        <div style={{ color: '#595959' }}>
+                            {formatBehaviors(behaviors)}
+                        </div>
+                    )
+                },
+                {
+                    title: '拦截方式',
+                    dataIndex: 'blockMethod',
+                    key: 'blockMethod',
+                    width: 120,
+                    render: (method) => (
+                        <span style={{ color: method === 'warning_and_block' ? '#ff4d4f' : '#faad14' }}>
+                            {formatBlockMethod(method)}
+                        </span>
+                    )
+                },
+                {
+                    title: '适用范围',
+                    dataIndex: 'scopeNames',
+                    key: 'scopeNames',
+                    width: 180,
+                    ellipsis: true,
+                    render: (scopeNames) => (
+                        <Popover content={<div style={{ maxWidth: 300, wordBreak: 'break-all' }}>{scopeNames.join('、')}</div>} trigger="hover" placement="top">
+                            <span style={{ color: '#1890ff', cursor: 'pointer', overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', lineHeight: '20px' }}>
+                                {scopeNames.join('、')}
+                            </span>
+                        </Popover>
+                    )
+                },
+                {
+                    title: '创建人',
+                    dataIndex: 'creator',
+                    key: 'creator',
+                    width: 100
+                },
+                {
+                    title: '创建时间',
+                    dataIndex: 'createTime',
+                    key: 'createTime',
+                    width: 180
+                },
+                {
+                    title: '修改人',
+                    dataIndex: 'modifier',
+                    key: 'modifier',
+                    width: 100
+                },
+                {
+                    title: '修改时间',
+                    dataIndex: 'modifyTime',
+                    key: 'modifyTime',
+                    width: 180
+                },
+                {
+                    title: '操作',
+                    key: 'action',
+                    width: 120,
+                    align: 'center',
+                    render: (_, record) => (
+                        <Space>
+                            <Button
+                                type="link"
+                                size="small"
+                                onClick={() => {
+                                    setEditRecord(record);
+                                    setFormValues({
+                                        name: record.name,
+                                        sensitiveWords: record.sensitiveWords.join('\n'),
+                                        behaviors: record.behaviors,
+                                        blockMethod: record.blockMethod,
+                                        scope: record.scope
+                                    });
+                                    form.setFieldsValue({
+                                        name: record.name,
+                                        sensitiveWords: record.sensitiveWords.join('\n'),
+                                        behaviors: record.behaviors,
+                                        blockMethod: record.blockMethod,
+                                        scope: record.scope
+                                    });
+                                    setAddModalVisible(true);
+                                }}
+                                style={{ padding: '0 4px' }}
+                            >
+                                编辑
+                            </Button>
+                            <Popover
+                                content={
+                                    <div style={{ padding: '8px 0', minWidth: '200px' }}>
+                                        <div style={{ marginBottom: '12px', color: '#595959', fontSize: '14px' }}>
+                                            删除后将无法恢复，是否确定删除？
+                                        </div>
+                                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                                            <Button
+                                                size="small"
+                                                onClick={() => setDeletePopoverVisible({ ...deletePopoverVisible, [record.id]: false })}
+                                            >
+                                                取消
+                                            </Button>
+                                            <Button
+                                                size="small"
+                                                type="primary"
+                                                danger
+                                                onClick={() => {
+                                                    setRules(rules.filter(item => item.id !== record.id));
+                                                    setDeletePopoverVisible({ ...deletePopoverVisible, [record.id]: false });
+                                                }}
+                                            >
+                                                删除
+                                            </Button>
+                                        </div>
+                                    </div>
+                                }
+                                title={null}
+                                trigger="click"
+                                open={deletePopoverVisible[record.id]}
+                                onOpenChange={(open) => setDeletePopoverVisible({ ...deletePopoverVisible, [record.id]: open })}
+                                placement="bottomRight"
+                            >
+                                <Button type="text" size="small" danger>
+                                    删除
+                                </Button>
+                            </Popover>
+                        </Space>
+                    )
+                }
+            ];
+
+            // 打开新增弹窗
+            const openAddModal = () => {
+                setEditRecord(null);
+                setFormValues({ name: '', sensitiveWords: '', behaviors: [], blockMethod: 'warning', scope: [] });
+                form.resetFields();
+                setTimeout(() => {
+                    form.setFieldsValue({
+                        name: '',
+                        sensitiveWords: '',
+                        behaviors: [],
+                        blockMethod: 'warning',
+                        scope: []
+                    });
+                }, 0);
+                setAddModalVisible(true);
+            };
+
+            // 提交表单
+            const handleSubmit = async () => {
+                try {
+                    const values = await form.validateFields();
+                    const sensitiveWordsList = values.sensitiveWords.split('\n').filter(w => w.trim());
+                    
+                    if (editRecord) {
+                        // 编辑模式
+                        setRules(rules.map(item =>
+                            item.id === editRecord.id
+                                ? {
+                                    ...item,
+                                    name: values.name,
+                                    sensitiveWords: sensitiveWordsList,
+                                    behaviors: values.behaviors,
+                                    blockMethod: values.blockMethod,
+                                    scope: values.scope,
+                                    scopeNames: getScopeNames(values.scope),
+                                    modifier: '管理员',
+                                    modifyTime: new Date().toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }).replace(/\//g, '-')
+                                }
+                                : item
+                        ));
+                        message.success('修改成功');
+                    } else {
+                        // 新增模式
+                        const newRule = {
+                            id: Date.now(),
+                            name: values.name,
+                            sensitiveWords: sensitiveWordsList,
+                            behaviors: values.behaviors,
+                            blockMethod: values.blockMethod,
+                            scope: values.scope || [],
+                            scopeNames: getScopeNames(values.scope) || ['全公司'],
+                            creator: '管理员',
+                            createTime: new Date().toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }).replace(/\//g, '-'),
+                            modifier: '管理员',
+                            modifyTime: new Date().toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }).replace(/\//g, '-')
+                        };
+                        setRules([...rules, newRule]);
+                        message.success('新增成功');
+                    }
+                    setAddModalVisible(false);
+                } catch (error) {
+                    console.error('表单验证失败:', error);
+                }
+            };
+
+            // 根据选中的scope获取名称
+            const getScopeNames = (scopeValues) => {
+                if (!scopeValues || scopeValues.length === 0) return ['全公司'];
+                const names = [];
+                const findNames = (nodes, values) => {
+                    nodes.forEach(node => {
+                        if (values.includes(node.value)) {
+                            names.push(node.title);
+                        }
+                        if (node.children) {
+                            findNames(node.children, values);
+                        }
+                    });
+                };
+                findNames(departmentTree, scopeValues || []);
+                return names.length > 0 ? names : ['全公司'];
+            };
+
+            return (
+                <div className="content-card">
+                    <div className="fixed-header">
+                        <h1 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '4px', color: '#262626' }}>
+                            内容拦截设置
+                        </h1>
+                        <div style={{ color: '#999', fontSize: '13px', marginBottom: '12px' }}>
+                            敏感词的拦截记录需要到企业微信管理后台「客户与上下游-客户联系-安全管控-聊天敏感词」查看。
+                        </div>
+                    </div>
+
+                    {/* 搜索筛选区域 */}
+                    <div className="search-section">
+                        <div className="search-left">
+                            <Input
+                                placeholder="请输入规则名称或敏感词"
+                                value={searchKeyword}
+                                onChange={(e) => setSearchKeyword(e.target.value)}
+                                style={{ width: 240 }}
+                                prefix={<i data-lucide="search" style={{ width: '14px', height: '14px', color: '#999' }}></i>}
+                                allowClear
+                            />
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <span style={{ color: '#666', fontSize: 14 }}>拦截行为:</span>
+                                <Select
+                                    value={behaviorFilter}
+                                    onChange={setBehaviorFilter}
+                                    style={{ width: 180 }}
+                                >
+                                    {behaviorOptions.map(opt => (
+                                        <Option key={opt.value} value={opt.value}>{opt.label}</Option>
+                                    ))}
+                                </Select>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <span style={{ color: '#666', fontSize: 14 }}>拦截方式:</span>
+                                <Select
+                                    value={blockMethodFilter}
+                                    onChange={setBlockMethodFilter}
+                                    style={{ width: 140 }}
+                                >
+                                    {blockMethodOptions.map(opt => (
+                                        <Option key={opt.value} value={opt.value}>{opt.label}</Option>
+                                    ))}
+                                </Select>
+                            </div>
+                        </div>
+                        <div className="search-right">
+                            <Button
+                                type="primary"
+                                icon={<i data-lucide="plus" style={{ width: '14px', height: '14px' }}></i>}
+                                onClick={openAddModal}
+                            >
+                                新建拦截规则
+                            </Button>
+                        </div>
+                    </div>
+
+                    {/* 表格 */}
+                    <Table
+                        columns={columns}
+                        dataSource={filteredRules}
+                        rowKey="id"
+                        pagination={{
+                            total: filteredRules.length,
+                            pageSize: 10,
+                            showSizeChanger: true,
+                            showTotal: (total) => `共 ${total} 条`,
+                            showQuickJumper: true
+                        }}
+                        scroll={{ x: 1600 }}
+                    />
+
+                    {/* 新建/编辑弹窗 */}
+                    <Modal
+                        title={editRecord ? '编辑拦截规则' : '新建拦截规则'}
+                        open={addModalVisible}
+                        onOk={handleSubmit}
+                        onCancel={() => setAddModalVisible(false)}
+                        okText="确定"
+                        cancelText="取消"
+                        width={600}
+                    >
+                        <Form
+                            form={form}
+                            layout="vertical"
+                            initialValues={formValues}
+                        >
+                            <Form.Item
+                                name="name"
+                                label="规则名称"
+                                rules={[{ required: true, message: '请输入规则名称' }]}
+                            >
+                                <Input placeholder="请输入规则名称" maxLength={20} showCount />
+                            </Form.Item>
+                            <Form.Item
+                                name="sensitiveWords"
+                                label="敏感词"
+                                rules={[{ required: true, message: '请输入敏感词' }]}
+                            >
+                                <TextArea
+                                    placeholder="请输入敏感词，多个词用回车分隔"
+                                    rows={3}
+                                    maxLength={2000}
+                                    showCount
+                                />
+                            </Form.Item>
+                            <Form.Item
+                                name="behaviors"
+                                label="敏感行为"
+                            >
+                                <Checkbox.Group options={[
+                                    { value: 'employee_send_phone', label: '员工发送手机号' },
+                                    { value: 'employee_send_email', label: '员工发送邮箱' },
+                                    { value: 'employee_send_receive_redpack', label: '员工发送和接收红包' }
+                                ]} />
+                            </Form.Item>
+                            <Form.Item
+                                name="blockMethod"
+                                label="拦截方式"
+                                rules={[{ required: true, message: '请选择拦截方式' }]}
+                            >
+                                <Radio.Group>
+                                    <Radio value="warning">警告</Radio>
+                                    <Radio value="warning_and_block">警告并拦截</Radio>
+                                </Radio.Group>
+                            </Form.Item>
+                            <Form.Item
+                                name="scope"
+                                label="适用范围"
+                            >
+                                <TreeSelect
+                                    treeData={departmentTree}
+                                    treeCheckable
+                                    showCheckedStrategy={TreeSelect.SHOW_CHILD}
+                                    placeholder="请选择适用范围"
+                                    style={{ width: '100%' }}
+                                    dropdownStyle={{ maxHeight: 400, overflow: 'auto' }}
+                                />
+                                <div style={{ color: '#999', fontSize: '12px', marginTop: '4px' }}>
+                                    不选择则默认为全公司适用
+                                </div>
+                            </Form.Item>
+                        </Form>
+                    </Modal>
                 </div>
             );
         };
@@ -13904,15 +16500,16 @@
                     children: [
                         { key: 'global_search', label: '全局搜索' },
                         { key: 'employee_chat_records', label: '聊天记录' },
-                        { key: 'voice_call_records', label: '语音通话记录' },
-                        { key: 'employee_sensitive_records', label: '敏感行为记录' },
+                        { key: 'session_risk_records', label: '会话风险记录' },
+                        { key: 'silence_reminder', label: '沉默提醒' },
                         { key: 'data_statistics', label: '数据统计' },
                         {
-                            key: 'wechat_settings',
-                            label: '企业微信设置',
+                            key: 'session_risk_settings',
+                            label: '会话风险设置',
                             children: [
                                 { key: 'sensitive_word_settings', label: '敏感词设置' },
-                                { key: 'sensitive_behavior_settings', label: '敏感行为设置' }
+                                { key: 'sensitive_behavior_settings', label: '敏感行为设置' },
+                                { key: 'content_block_settings', label: '内容拦截设置' }
                             ]
                         }
                     ]
@@ -14323,6 +16920,14 @@
                                     <GlobalSearch />
                                 ) : selectedKeys.includes('employee_chat_records') ? (
                                     <EmployeeChatRecords />
+                                ) : selectedKeys.includes('session_risk_records') ? (
+                                    <SessionRiskRecords />
+                                ) : selectedKeys.includes('sensitive_word_settings') ? (
+                                    <SensitiveWordSettings />
+                                ) : selectedKeys.includes('sensitive_behavior_settings') ? (
+                                    <SensitiveBehaviorSettings />
+                                ) : selectedKeys.includes('content_block_settings') ? (
+                                    <ContentBlockSettings />
                                 ) : selectedKeys.includes('my_leads') ? (
                                     <MyLeads />
                                 ) : selectedKeys.includes('call_records') ? (
