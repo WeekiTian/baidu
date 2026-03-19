@@ -522,13 +522,35 @@
             50% { background-color: #ffeb3b; }
         }
 
+        /* 会话记录详情弹窗样式 */
+        .detail-modal .ant-modal-content {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .detail-modal .ant-modal-body {
+            padding: 0;
+            overflow: visible;
+            display: flex;
+            flex-direction: column;
+        }
+
         .chat-detail-container {
             padding: 16px;
             padding-bottom: 0;
             background-color: #ededed;
             flex: 1;
             overflow-y: auto;
-            min-height: 0;
+            min-height: 450px;
+            max-height: 550px;
+        }
+
+        /* 会话风险记录页面布局样式 */
+        .session-risk-container {
+            display: flex;
+            flex-direction: column;
+            height: calc(100vh - 40px);
+            overflow: hidden;
         }
 
         .chat-message {
@@ -1028,7 +1050,7 @@
 
     <script type="text/babel">
         const { useState, useEffect, useMemo } = React;
-        const { Layout, Menu, Button, Input, Table, Select, Space, Badge, ConfigProvider, Form, Radio, TreeSelect, Tag, message, Drawer, Avatar, Modal, Popover, Checkbox, Tabs, DatePicker } = antd;
+        const { Layout, Menu, Button, Input, Table, Select, Space, Badge, ConfigProvider, Form, Radio, TreeSelect, Tag, message, Drawer, Avatar, Modal, Popover, Checkbox, Tabs, DatePicker, Pagination } = antd;
         const { Header, Sider, Content } = Layout;
         const { Search } = Input;
         const { Option } = Select;
@@ -1322,7 +1344,12 @@
                                     )}
 
                                     {/* 未接通提示 */}
-                                    {!isConnected && <div style={{ textAlign: 'center', padding: '40px 0', color: '#8c8c8c' }}><i data-lucide="phone-missed" style={{ width: '48px', height: '48px', marginBottom: '16px' }}></i><div style={{ fontSize: '14px' }}>通话未接通，暂无详细通话信息</div></div>}
+                                    {!isConnected && (
+                                        <div style={{ textAlign: 'center', padding: '40px 0', color: '#8c8c8c' }}>
+                                            <i data-lucide="phone-missed" style={{ width: '48px', height: '48px', marginBottom: '16px' }}></i>
+                                            <div style={{ fontSize: '14px' }}>通话未接通，暂无详细通话信息</div>
+                                        </div>
+                                    )}
                                 </div>
                             )}
 
@@ -1360,7 +1387,12 @@
                                             </div>
                                         </>
                                     ) : (
-                                        <div style={{ textAlign: 'center', padding: '40px 0', color: '#8c8c8c' }}><i data-lucide="phone-missed" style={{ width: '48px', height: '48px', marginBottom: '16px' }}></i><div style={{ fontSize: '14px' }}>通话未接通，暂无通话总结信息</div></div>
+                                        <>
+                                            <div style={{ textAlign: 'center', padding: '40px 0', color: '#8c8c8c' }}>
+                                                <i data-lucide="phone-missed" style={{ width: '48px', height: '48px', marginBottom: '16px' }}></i>
+                                                <div style={{ fontSize: '14px' }}>通话未接通，暂无通话总结信息</div>
+                                            </div>
+                                        </>
                                     )}
                                 </div>
                             )}
@@ -8557,6 +8589,520 @@
             );
         };
 
+        // 聊天记录详情组件（用于敏感词/敏感行为详情展示）
+        const ChatRecordDetail = ({ record, activeTab, onSaveAudit }) => {
+            const [messageTypeFilter, setMessageTypeFilter] = useState('全部');
+            const [dateRangeFilter, setDateRangeFilter] = useState(null);
+            const [chatSearchKeyword, setChatSearchKeyword] = useState('');
+            const [chatMatchCount, setChatMatchCount] = useState(0);
+            const [chatCurrentMatchIndex, setChatCurrentMatchIndex] = useState(0);
+            const [chatMatchRefs, setChatMatchRefs] = useState([]);
+            const [auditResult, setAuditResult] = useState(record.auditStatus || 'pending');
+            const [auditRemark, setAuditRemark] = useState('');
+            const [charCount, setCharCount] = useState(0);
+
+            // 格式化时间显示
+            const formatTime = (timeStr) => {
+                const now = new Date();
+                const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                const currentYear = now.getFullYear();
+                
+                const [datePart, timePart] = timeStr.split(' ');
+                const [year, month, day] = datePart.split('/').map(Number);
+                const [hours, minutes] = timePart.split(':').map(Number);
+                const timeDate = new Date(year, month - 1, day, hours, minutes);
+                
+                const isToday = timeDate >= today && timeDate < new Date(today.getTime() + 24 * 60 * 60 * 1000);
+                const isCurrentYear = year === currentYear;
+                
+                const timeStrWithoutSeconds = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+                
+                if (isToday) {
+                    return timeStrWithoutSeconds;
+                } else if (isCurrentYear) {
+                    return `${month}/${day} ${timeStrWithoutSeconds}`;
+                } else {
+                    return `${year}/${month}/${day} ${timeStrWithoutSeconds}`;
+                }
+            };
+
+            // 根据记录生成聊天消息数据
+            const getChatMessages = () => {
+                const employeeName = record.employeeName || '员工';
+                const customerName = record.sourceName || '客户';
+                const isFromEmployee = record.senderType === 'employee';
+                
+                // 模拟聊天记录数据
+                return [
+                    {
+                        id: 1,
+                        sender: isFromEmployee ? customerName : employeeName,
+                        type: 'text',
+                        content: '您好，请问有什么可以帮您？',
+                        time: record.sendTime,
+                        isMe: !isFromEmployee,
+                        avatar: isFromEmployee ? record.avatar : null,
+                        senderType: isFromEmployee ? 'customer' : 'employee'
+                    },
+                    {
+                        id: 2,
+                        sender: employeeName,
+                        type: 'text',
+                        content: `您好，我是${employeeName}，很高兴为您服务。`,
+                        time: record.sendTime,
+                        isMe: true,
+                        senderType: 'employee'
+                    },
+                    {
+                        id: 3,
+                        sender: customerName,
+                        type: 'text',
+                        content: `我想咨询一下关于${record.sensitiveWord}的事情。`,
+                        time: record.sendTime,
+                        isMe: false,
+                        avatar: record.avatar,
+                        senderType: 'customer'
+                    },
+                    {
+                        id: 4,
+                        sender: employeeName,
+                        type: 'text',
+                        content: `好的，关于${record.sensitiveWord}，我为您详细说明一下。`,
+                        time: record.sendTime,
+                        isMe: true,
+                        senderType: 'employee'
+                    },
+                    {
+                        id: 5,
+                        sender: customerName,
+                        type: 'emoji',
+                        content: '😊',
+                        time: record.sendTime,
+                        isMe: false,
+                        avatar: record.avatar,
+                        senderType: 'customer'
+                    },
+                    {
+                        id: 6,
+                        sender: employeeName,
+                        type: 'image',
+                        content: '产品图片',
+                        imageUrl: 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent('<svg width="200" height="150" xmlns="http://www.w3.org/2000/svg"><rect width="200" height="150" fill="#4A90E2"/><text x="50%" y="50%" font-family="Arial" font-size="14" fill="#fff" text-anchor="middle" dominant-baseline="middle">产品图片</text></svg>'),
+                        time: record.sendTime,
+                        isMe: true,
+                        senderType: 'employee'
+                    },
+                    {
+                        id: 7,
+                        sender: customerName,
+                        type: 'voice',
+                        content: '语音消息',
+                        duration: 15,
+                        transcript: '好的，我明白了。谢谢您的详细介绍。',
+                        time: record.sendTime,
+                        isMe: false,
+                        avatar: record.avatar,
+                        senderType: 'customer'
+                    },
+                    {
+                        id: 8,
+                        sender: employeeName,
+                        type: 'file',
+                        content: '产品介绍.pdf',
+                        fileName: '产品介绍.pdf',
+                        fileSize: '2.5MB',
+                        fileType: 'pdf',
+                        time: record.sendTime,
+                        isMe: true,
+                        senderType: 'employee'
+                    }
+                ];
+            };
+
+            // 根据筛选条件过滤消息
+            const getFilteredMessages = () => {
+                let messages = getChatMessages();
+                
+                // 消息类型筛选
+                if (messageTypeFilter !== '全部') {
+                    messages = messages.filter(msg => msg.type === messageTypeFilter);
+                }
+                
+                // 日期筛选
+                if (dateRangeFilter && dateRangeFilter.length === 2) {
+                    const [start, end] = dateRangeFilter;
+                    messages = messages.filter(msg => {
+                        const msgDate = new Date(msg.time.replace(/\//g, '-'));
+                        return msgDate >= start.startOf('day').toDate() && msgDate <= end.endOf('day').toDate();
+                    });
+                }
+                
+                return messages;
+            };
+
+            const filteredMessages = getFilteredMessages();
+
+            // 渲染消息内容
+            const renderMessageContent = (msg) => {
+                switch (msg.type) {
+                    case 'text':
+                        return <span>{msg.content}</span>;
+                    case 'emoji':
+                        return <span style={{ fontSize: '24px' }}>{msg.content}</span>;
+                    case 'image':
+                        return (
+                            <div className="message-image-container" style={{ maxWidth: '200px' }}>
+                                <img 
+                                    src={msg.imageUrl} 
+                                    alt={msg.content}
+                                    style={{ width: '100%', borderRadius: '4px' }}
+                                />
+                            </div>
+                        );
+                    case 'voice':
+                        return (
+                            <div>
+                                <div className="message-voice-container" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <div style={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+                                        <i data-lucide="play" style={{ width: '12px', height: '12px' }}></i>
+                                    </div>
+                                    <div>{msg.duration || 15}"</div>
+                                    <div style={{ flex: 1, height: '1px', backgroundColor: '#d9d9d9' }}></div>
+                                </div>
+                                {msg.transcript && (
+                                    <div style={{ marginTop: '4px', fontSize: '12px', color: '#8c8c8c' }}>{msg.transcript}</div>
+                                )}
+                            </div>
+                        );
+                    case 'file':
+                        return (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <div style={{ 
+                                    width: '40px', 
+                                    height: '40px', 
+                                    backgroundColor: '#f5222d', 
+                                    borderRadius: '4px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    color: '#fff',
+                                    fontSize: '10px',
+                                    fontWeight: 'bold'
+                                }}>
+                                    PDF
+                                </div>
+                                <div>
+                                    <div style={{ fontSize: '13px', color: '#262626' }}>{msg.fileName || msg.content}</div>
+                                    <div style={{ fontSize: '12px', color: '#8c8c8c' }}>{msg.fileSize || '2.5MB'}</div>
+                                </div>
+                            </div>
+                        );
+                    default:
+                        return <span>{msg.content}</span>;
+                }
+            };
+
+            // 处理备注输入，计算 UTF-8 字符数
+            const handleRemarkChange = (e) => {
+                const value = e.target.value;
+                // UTF-8 编码，中文占 3 个字节，英文占 1 个字节
+                let utf8Length = 0;
+                for (let i = 0; i < value.length; i++) {
+                    const charCode = value.charCodeAt(i);
+                    if (charCode <= 0x7F) {
+                        utf8Length += 1;
+                    } else if (charCode <= 0x7FF) {
+                        utf8Length += 2;
+                    } else {
+                        utf8Length += 3;
+                    }
+                }
+                
+                if (utf8Length <= 500) {
+                    setAuditRemark(value);
+                    setCharCount(utf8Length);
+                }
+            };
+
+            // 保存审核结果
+            const handleSave = () => {
+                if (!auditResult || auditResult === 'pending') {
+                    message.warning('请选择审核结果');
+                    return;
+                }
+                
+                // 调用保存回调
+                if (onSaveAudit) {
+                    onSaveAudit({
+                        recordKey: record.key,
+                        auditStatus: auditResult,
+                        auditRemark: auditRemark
+                    });
+                }
+            };
+
+            // 检查保存按钮是否可用
+            const isSaveDisabled = !auditResult || auditResult === 'pending';
+
+            // 获取头像
+            const getAvatar = (msg) => {
+                if (msg.senderType === 'customer') {
+                    if (msg.avatar) {
+                        return (
+                            <img 
+                                src={msg.avatar} 
+                                alt={msg.sender}
+                                style={{ 
+                                    width: '40px', 
+                                    height: '40px', 
+                                    borderRadius: '50%',
+                                    objectFit: 'cover'
+                                }}
+                            />
+                        );
+                    } else {
+                        return (
+                            <Avatar 
+                                size={40}
+                                style={{ 
+                                    backgroundColor: '#52c41a',
+                                    fontSize: '16px'
+                                }}
+                            >
+                                {msg.sender.charAt(0)}
+                            </Avatar>
+                        );
+                    }
+                } else {
+                    return (
+                        <Avatar 
+                            size={40}
+                            style={{ 
+                                backgroundColor: '#1890ff',
+                                fontSize: '16px'
+                            }}
+                        >
+                            {msg.sender.charAt(0)}
+                        </Avatar>
+                    );
+                }
+            };
+
+            return (
+                <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                    {/* 筛选栏 */}
+                    <div style={{ 
+                        padding: '16px', 
+                        borderBottom: '1px solid #f0f0f0',
+                        backgroundColor: '#fafafa',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                        flexShrink: 0
+                    }}>
+                        {/* 消息类型下拉 */}
+                        <Select
+                            value={messageTypeFilter}
+                            onChange={(value) => setMessageTypeFilter(value)}
+                            style={{ width: 120 }}
+                            size="small"
+                        >
+                            <Select.Option value="全部">全部</Select.Option>
+                            <Select.Option value="文本">文本</Select.Option>
+                            <Select.Option value="表情">表情</Select.Option>
+                            <Select.Option value="语音">语音</Select.Option>
+                            <Select.Option value="图片">图片</Select.Option>
+                            <Select.Option value="视频">视频</Select.Option>
+                            <Select.Option value="文件">文件</Select.Option>
+                            <Select.Option value="链接">链接</Select.Option>
+                            <Select.Option value="红包">红包</Select.Option>
+                            <Select.Option value="名片">名片</Select.Option>
+                            <Select.Option value="位置">位置</Select.Option>
+                            <Select.Option value="小程序消息">小程序消息</Select.Option>
+                            <Select.Option value="撤回消息">撤回消息</Select.Option>
+                        </Select>
+                        
+                        {/* 日期范围选择 */}
+                        <RangePicker
+                            value={dateRangeFilter}
+                            onChange={(dates) => setDateRangeFilter(dates)}
+                            showTime={{ format: 'HH:mm:ss' }}
+                            format="YYYY/MM/DD HH:mm:ss"
+                            placeholder={['开始日期', '结束日期']}
+                            style={{ width: 360 }}
+                            size="small"
+                        />
+                        
+                        {/* 搜索框 */}
+                        <div style={{ flex: 1 }}>
+                            <Input
+                                prefix={<i data-lucide="search" style={{ width: '14px', height: '14px', color: '#8c8c8c', marginRight: '6px' }}></i>}
+                                placeholder="搜索聊天记录..."
+                                value={chatSearchKeyword}
+                                onChange={(e) => setChatSearchKeyword(e.target.value)}
+                                size="small"
+                                allowClear
+                            />
+                        </div>
+                    </div>
+
+                    {/* 聊天记录展示区域 */}
+                    <div className="chat-detail-container" style={{ 
+                        flex: 1, 
+                        overflowY: 'auto',
+                        padding: '20px',
+                        backgroundColor: '#f5f5f5',
+                        minHeight: '450px',
+                        maxHeight: '550px'
+                    }}>
+                        {filteredMessages.map((msg) => (
+                            <div
+                                key={msg.id}
+                                style={{
+                                    display: 'flex',
+                                    marginBottom: '16px',
+                                    flexDirection: msg.isMe ? 'row-reverse' : 'row'
+                                }}
+                            >
+                                {/* 头像 */}
+                                <div style={{ 
+                                    flexShrink: 0,
+                                    margin: '0 8px'
+                                }}>
+                                    {getAvatar(msg)}
+                                </div>
+                                
+                                {/* 消息气泡 */}
+                                <div style={{
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    maxWidth: '60%',
+                                    alignItems: msg.isMe ? 'flex-end' : 'flex-start'
+                                }}>
+                                    {/* 发送者和时间 */}
+                                    <div style={{ 
+                                        fontSize: '12px', 
+                                        color: '#8c8c8c',
+                                        marginBottom: '4px',
+                                        padding: '0 8px'
+                                    }}>
+                                        {msg.sender} · {formatTime(msg.time)}
+                                    </div>
+                                    
+                                    {/* 消息内容气泡 */}
+                                    <div style={{
+                                        padding: '12px 16px',
+                                        borderRadius: '8px',
+                                        backgroundColor: msg.isMe ? '#d9f7be' : '#fff',
+                                        border: msg.isMe ? '1px solid #b7eb8f' : '1px solid #e8e8e8',
+                                        fontSize: '14px',
+                                        color: '#262626',
+                                        lineHeight: '1.5',
+                                        wordBreak: 'break-word'
+                                    }}>
+                                        {renderMessageContent(msg)}
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* 审核信息区域 */}
+                    <div style={{
+                        padding: '16px 24px',
+                        borderTop: '1px solid #f0f0f0',
+                        backgroundColor: '#fafafa'
+                    }}>
+                        {/* 审核结果 */}
+                        <div style={{
+                            marginBottom: '16px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            flexWrap: 'nowrap'
+                        }}>
+                            <div style={{
+                                width: '70px',
+                                color: '#8c8c8c',
+                                fontSize: '14px',
+                                flexShrink: 0
+                            }}>
+                                审核结果：<span style={{ color: '#ff4d4f', marginLeft: '2px' }}>*</span>
+                            </div>
+                            <Radio.Group
+                                value={auditResult}
+                                onChange={(e) => setAuditResult(e.target.value)}
+                                style={{ whiteSpace: 'nowrap' }}
+                            >
+                                <Radio value="no_risk">无风险</Radio>
+                                <Radio value="violation">违规</Radio>
+                            </Radio.Group>
+                        </div>
+
+                        {/* 备注 */}
+                        <div style={{
+                            display: 'flex',
+                            alignItems: 'flex-start'
+                        }}>
+                            <div style={{
+                                width: '70px',
+                                color: '#8c8c8c',
+                                fontSize: '14px',
+                                flexShrink: 0,
+                                paddingTop: '8px'
+                            }}>
+                                备注：
+                            </div>
+                            <div style={{ flex: 1 }}>
+                                <Input.TextArea
+                                    value={auditRemark}
+                                    onChange={handleRemarkChange}
+                                    placeholder="输入审核结果的备注信息"
+                                    rows={3}
+                                    maxLength={500}
+                                    showCount={false}
+                                    style={{ 
+                                        resize: 'none',
+                                        fontFamily: 'monospace'
+                                    }}
+                                />
+                                <div style={{ 
+                                    textAlign: 'right', 
+                                    fontSize: '12px', 
+                                    color: charCount > 450 ? '#ff4d4f' : '#8c8c8c',
+                                    marginTop: '4px'
+                                }}>
+                                    {charCount}/500
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* 底部按钮 */}
+                    <div style={{
+                        padding: '16px 24px',
+                        borderTop: '1px solid #f0f0f0',
+                        backgroundColor: '#fff',
+                        display: 'flex',
+                        justifyContent: 'flex-end',
+                        gap: '8px'
+                    }}>
+                        <Button
+                            onClick={() => onSaveAudit && onSaveAudit(null, true)}
+                        >
+                            关闭
+                        </Button>
+                        <Button
+                            type="primary"
+                            onClick={handleSave}
+                            disabled={isSaveDisabled}
+                        >
+                            保存
+                        </Button>
+                    </div>
+                </div>
+            );
+        };
+
         // 会话风险记录组件
         const SessionRiskRecords = () => {
             const [activeTab, setActiveTab] = useState('sensitive_word'); // sensitive_word | sensitive_behavior
@@ -8565,17 +9111,15 @@
             const [auditStatus, setAuditStatus] = useState('all');
             const [detailDrawerVisible, setDetailDrawerVisible] = useState(false);
             const [selectedRecord, setSelectedRecord] = useState(null);
-
-            // 模拟敏感词记录数据（员工和微信客户的真实数据）
-            const sensitiveWordData = [
+            const [sensitiveWordData, setSensitiveWordData] = useState([
                 {
                     key: '1',
                     sensitiveWord: '违规广告',
                     hitRule: '广告违规规则',
                     senderType: 'employee',
                     employeeName: '李想',
-                    sourceName: '李想',
-                    sourceType: 'single',
+                    sourceName: '客户沟通群A组',
+                    sourceType: 'group',
                     avatar: null,
                     auditStatus: 'pending',
                     sendTime: '2026/03/19 14:30:25'
@@ -8587,7 +9131,7 @@
                     senderType: 'wechat_customer',
                     employeeName: '王伟军',
                     sourceName: '阳光灿烂的日子',
-                    sourceType: 'group',
+                    sourceType: 'single',
                     avatar: 'https://i.pravatar.cc/150?img=25',
                     auditStatus: 'no_risk',
                     sendTime: '2026/03/19 13:20:15'
@@ -8598,8 +9142,8 @@
                     hitRule: '敏感词规则-返利',
                     senderType: 'employee',
                     employeeName: '毛奇',
-                    sourceName: '毛奇',
-                    sourceType: 'single',
+                    sourceName: '产品咨询群一组',
+                    sourceType: 'group',
                     avatar: null,
                     auditStatus: 'violation',
                     sendTime: '2026/03/19 11:45:30'
@@ -8622,8 +9166,8 @@
                     hitRule: '敏感词规则-利益',
                     senderType: 'employee',
                     employeeName: '周杰',
-                    sourceName: '周杰',
-                    sourceType: 'single',
+                    sourceName: '售后服务群二组',
+                    sourceType: 'group',
                     avatar: null,
                     auditStatus: 'no_risk',
                     sendTime: '2026/03/18 10:30:45'
@@ -8635,7 +9179,7 @@
                     senderType: 'wechat_customer',
                     employeeName: '王晨',
                     sourceName: '春暖花开',
-                    sourceType: 'group',
+                    sourceType: 'single',
                     avatar: 'https://i.pravatar.cc/150?img=32',
                     auditStatus: 'violation',
                     sendTime: '2026/03/17 15:10:20'
@@ -8646,8 +9190,8 @@
                     hitRule: '敏感词规则-促销',
                     senderType: 'employee',
                     employeeName: '王鸿码',
-                    sourceName: '王鸿码',
-                    sourceType: 'single',
+                    sourceName: 'VIP客户交流群',
+                    sourceType: 'group',
                     avatar: null,
                     auditStatus: 'pending',
                     sendTime: '2026/03/17 09:25:30'
@@ -8664,7 +9208,7 @@
                     auditStatus: 'no_risk',
                     sendTime: '2026/03/16 14:50:15'
                 }
-            ];
+            ]);
 
             // 模拟敏感行为记录数据（消息来源改为微信客户）
             const sensitiveBehaviorData = [
@@ -8686,8 +9230,8 @@
                     hitRule: '敏感行为规则-异常操作',
                     senderType: 'employee',
                     employeeName: '王伟军',
-                    sourceName: '往事如烟',
-                    sourceType: 'single',
+                    sourceName: '销售一组客户群',
+                    sourceType: 'group',
                     avatar: 'https://i.pravatar.cc/150?img=4',
                     auditStatus: 'violation',
                     sendTime: '2026/03/19 10:15:30'
@@ -8710,8 +9254,8 @@
                     hitRule: '敏感行为规则-信息泄露',
                     senderType: 'employee',
                     employeeName: '谢丽',
-                    sourceName: '秋水伊人',
-                    sourceType: 'single',
+                    sourceName: '客服二组交流群',
+                    sourceType: 'group',
                     avatar: 'https://i.pravatar.cc/150?img=9',
                     auditStatus: 'pending',
                     sendTime: '2026/03/18 11:20:45'
@@ -8734,8 +9278,8 @@
                     hitRule: '敏感行为规则-频繁操作',
                     senderType: 'employee',
                     employeeName: '王晨',
-                    sourceName: '一路向北',
-                    sourceType: 'single',
+                    sourceName: '市场部客户群',
+                    sourceType: 'group',
                     avatar: 'https://i.pravatar.cc/150?img=11',
                     auditStatus: 'pending',
                     sendTime: '2026/03/16 15:20:00'
@@ -8782,6 +9326,19 @@
 
             const filteredData = getFilteredData();
 
+            // 处理审核保存
+            const handleSaveAudit = (auditData, isClose = false) => {
+                if (isClose) {
+                    setDetailDrawerVisible(false);
+                    return;
+                }
+                
+                if (!auditData) return;
+                
+                message.success('保存成功');
+                setDetailDrawerVisible(false);
+            };
+
             // 审核结果映射
             const auditStatusMap = {
                 'pending': { text: '待审核', color: '#faad14' },
@@ -8818,7 +9375,8 @@
                     title: '发送人',
                     dataIndex: 'senderType',
                     key: 'senderType',
-                    width: 200,
+                    width: 220,
+                    ellipsis: true,
                     render: (type, record) => (
                         type === 'employee' ? (
                             <span>{record.employeeName}</span>
@@ -8865,12 +9423,10 @@
                 {
                     title: '消息来源',
                     dataIndex: 'sourceName',
-                    key: 'sourceName',
+                    key: 'sourceSource',
                     width: 200,
                     render: (name, record) => (
                         record.senderType === 'employee' ? (
-                            <span>{name}</span>
-                        ) : (
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                 {record.avatar ? (
                                     <img 
@@ -8896,10 +9452,51 @@
                                 )}
                                 <span>
                                     {name}
-                                    {record.sourceType === 'group' && !record.avatar ? (
-                                        <span style={{ color: '#52c41a', fontSize: '12px', fontWeight: '500' }}>@微信</span>
+                                    <span style={{ color: '#fa8c16', fontSize: '12px', fontWeight: '500', marginLeft: '4px' }}>群聊</span>
+                                </span>
+                            </div>
+                        ) : (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                {record.sourceType === 'group' ? (
+                                    <Avatar 
+                                        size={28}
+                                        style={{ 
+                                            backgroundColor: '#52c41a',
+                                            fontSize: '12px'
+                                        }}
+                                    >
+                                        群
+                                    </Avatar>
+                                ) : (
+                                    record.avatar ? (
+                                        <img 
+                                            src={record.avatar} 
+                                            alt={name}
+                                            style={{ 
+                                                width: '28px', 
+                                                height: '28px', 
+                                                borderRadius: '50%',
+                                                objectFit: 'cover'
+                                            }}
+                                        />
                                     ) : (
-                                        <span style={{ color: '#52c41a', fontSize: '12px', fontWeight: '500' }}>@微信</span>
+                                        <Avatar 
+                                            size={28}
+                                            style={{ 
+                                                backgroundColor: '#1890ff',
+                                                fontSize: '12px'
+                                            }}
+                                        >
+                                            {name.charAt(0)}
+                                        </Avatar>
+                                    )
+                                )}
+                                <span>
+                                    {name}
+                                    {record.sourceType === 'group' ? (
+                                        <span style={{ color: '#fa8c16', fontSize: '12px', fontWeight: '500', marginLeft: '4px' }}>群聊</span>
+                                    ) : (
+                                        <span style={{ color: '#52c41a', fontSize: '12px', fontWeight: '500', marginLeft: '4px' }}>@微信</span>
                                     )}
                                 </span>
                             </div>
@@ -8922,6 +9519,13 @@
                             </span>
                         );
                     }
+                },
+                {
+                    title: '审核备注',
+                    dataIndex: 'auditRemark',
+                    key: 'auditRemark',
+                    width: 200,
+                    ellipsis: true
                 },
                 {
                     title: '发送时间',
@@ -8966,7 +9570,8 @@
                     title: '触发人',
                     dataIndex: 'employeeName',
                     key: 'employeeName',
-                    width: 120,
+                    width: 140,
+                    ellipsis: true,
                     render: (name, record) => (
                         record.senderType === 'employee' ? (
                             <span>{name}</span>
@@ -9008,37 +9613,50 @@
                     title: '消息来源',
                     dataIndex: 'sourceName',
                     key: 'sourceName',
-                    width: 200,
+                    width: 220,
+                    ellipsis: true,
                     render: (name, record) => (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            {record.avatar ? (
-                                <img 
-                                    src={record.avatar} 
-                                    alt={name}
-                                    style={{ 
-                                        width: '28px', 
-                                        height: '28px', 
-                                        borderRadius: '50%',
-                                        objectFit: 'cover'
-                                    }}
-                                />
-                            ) : (
+                            {record.sourceType === 'group' ? (
                                 <Avatar 
                                     size={28}
                                     style={{ 
-                                        backgroundColor: record.sourceType === 'group' ? '#52c41a' : '#1890ff',
+                                        backgroundColor: '#52c41a',
                                         fontSize: '12px'
                                     }}
                                 >
-                                    {record.sourceType === 'group' ? '群' : name.charAt(0)}
+                                    群
                                 </Avatar>
+                            ) : (
+                                record.avatar ? (
+                                    <img 
+                                        src={record.avatar} 
+                                        alt={name}
+                                        style={{ 
+                                            width: '28px', 
+                                            height: '28px', 
+                                            borderRadius: '50%',
+                                            objectFit: 'cover'
+                                        }}
+                                    />
+                                ) : (
+                                    <Avatar 
+                                        size={28}
+                                        style={{ 
+                                            backgroundColor: '#1890ff',
+                                            fontSize: '12px'
+                                        }}
+                                    >
+                                        {name.charAt(0)}
+                                    </Avatar>
+                                )
                             )}
                             <span>
                                 {name}
-                                {record.sourceType === 'group' && !record.avatar ? (
-                                    <span style={{ color: '#52c41a', fontSize: '12px', fontWeight: '500' }}>@微信</span>
+                                {record.sourceType === 'group' ? (
+                                    <span style={{ color: '#fa8c16', fontSize: '12px', fontWeight: '500', marginLeft: '4px' }}>群聊</span>
                                 ) : (
-                                    <span style={{ color: '#52c41a', fontSize: '12px', fontWeight: '500' }}>@微信</span>
+                                    <span style={{ color: '#52c41a', fontSize: '12px', fontWeight: '500', marginLeft: '4px' }}>@微信</span>
                                 )}
                             </span>
                         </div>
@@ -9060,6 +9678,13 @@
                             </span>
                         );
                     }
+                },
+                {
+                    title: '审核备注',
+                    dataIndex: 'auditRemark',
+                    key: 'auditRemark',
+                    width: 200,
+                    ellipsis: true
                 },
                 {
                     title: '触发时间',
@@ -9092,194 +9717,143 @@
             };
 
             return (
-                <div className="content-card">
-                    <h1 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '16px', color: '#262626' }}>
-                        会话风险记录
-                    </h1>
-
-                    {/* Tab页签 */}
-                    <div style={{ marginBottom: '16px' }}>
+                <div className="session-risk-container" style={{ 
+                    display: 'flex', 
+                    flexDirection: 'column',
+                    height: 'calc(100vh - 40px)',
+                    overflow: 'hidden'
+                }}>
+                    {/* 固定顶部区域：标题和 Tab */}
+                    <div style={{ 
+                        padding: '16px 12px 12px',
+                        backgroundColor: '#fff',
+                        borderBottom: '1px solid #f0f0f0',
+                        flexShrink: 0
+                    }}>
+                        <h1 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '16px', color: '#262626', margin: 0 }}>
+                            会话风险记录
+                        </h1>
+            
+                        {/* Tab 页签 */}
                         <Tabs 
                             activeKey={activeTab} 
                             onChange={setActiveTab}
                             items={tabItems}
+                            style={{ marginBottom: 0 }}
+                        />
+                    </div>
+            
+                    {/* 固定筛选栏 */}
+                    <div style={{ 
+                        padding: '8px 12px',
+                        backgroundColor: '#fff',
+                        borderBottom: '1px solid #f0f0f0',
+                        flexShrink: 0
+                    }}>
+                        <div className="search-section" style={{ marginBottom: 0 }}>
+                            <div className="search-left">
+                                {activeTab === 'sensitive_word' && (
+                                    <Input
+                                        placeholder="查询触发的敏感词"
+                                        value={searchKeyword}
+                                        onChange={(e) => setSearchKeyword(e.target.value)}
+                                        style={{ width: 200 }}
+                                        allowClear
+                                    />
+                                )}
+                                <DatePicker.RangePicker
+                                    value={dateRange}
+                                    onChange={setDateRange}
+                                    format="YYYY/MM/DD"
+                                    placeholder={['开始时间', '结束时间']}
+                                />
+                                <span style={{ color: '#666', fontSize: '14px', marginRight: '8px' }}>审核结果:</span>
+                                <Select
+                                    value={auditStatus}
+                                    onChange={setAuditStatus}
+                                    style={{ width: 120 }}
+                                >
+                                    <Option value="all">全部</Option>
+                                    <Option value="pending">待审核</Option>
+                                    <Option value="no_risk">无风险</Option>
+                                    <Option value="violation">违规</Option>
+                                </Select>
+                            </div>
+                        </div>
+                    </div>
+            
+                    {/* 表格操作按钮 */}
+                    <div style={{ 
+                        padding: '6px 12px',
+                        backgroundColor: '#fff',
+                        borderBottom: '1px solid #f0f0f0',
+                        flexShrink: 0
+                    }}>
+                        <div className="table-actions" style={{ marginBottom: 0 }}>
+                            <div className="table-actions-left">
+                                <span style={{ color: '#666', fontSize: '14px' }}>
+                                    共 {filteredData.length} 条记录
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+            
+                    {/* 可滚动列表区域 */}
+                    <div style={{ 
+                        flex: 1,
+                        overflow: 'auto',
+                        backgroundColor: '#fff'
+                    }}>
+                        {/* 数据表格 */}
+                        <Table
+                            columns={getColumns()}
+                            dataSource={filteredData}
+                            pagination={false}
+                            scroll={{ x: 'max-content' }}
+                        />
+                    </div>
+            
+                    {/* 固定底部页码组件 */}
+                    <div style={{ 
+                        padding: '8px 12px',
+                        backgroundColor: '#fff',
+                        borderTop: '1px solid #f0f0f0',
+                        flexShrink: 0,
+                        display: 'flex',
+                        justifyContent: 'flex-end'
+                    }}>
+                        <Pagination
+                            total={filteredData.length}
+                            pageSize={10}
+                            showSizeChanger={true}
+                            showTotal={(total) => `共 ${total} 条`}
+                            showQuickJumper={true}
                         />
                     </div>
 
-                    {/* 筛选栏 */}
-                    <div className="search-section">
-                        <div className="search-left">
-                            {activeTab === 'sensitive_word' && (
-                                <Input
-                                    placeholder="查询触发的敏感词"
-                                    value={searchKeyword}
-                                    onChange={(e) => setSearchKeyword(e.target.value)}
-                                    style={{ width: 200 }}
-                                    allowClear
-                                />
-                            )}
-                            <DatePicker.RangePicker
-                                value={dateRange}
-                                onChange={setDateRange}
-                                format="YYYY/MM/DD"
-                                placeholder={['开始时间', '结束时间']}
-                            />
-                            <span style={{ color: '#666', fontSize: '14px', marginRight: '8px' }}>审核结果:</span>
-                            <Select
-                                value={auditStatus}
-                                onChange={setAuditStatus}
-                                style={{ width: 120 }}
-                            >
-                                <Option value="all">全部</Option>
-                                <Option value="pending">待审核</Option>
-                                <Option value="no_risk">无风险</Option>
-                                <Option value="violation">违规</Option>
-                            </Select>
-                        </div>
-                    </div>
-
-                    {/* 表格操作按钮 */}
-                    <div className="table-actions">
-                        <div className="table-actions-left">
-                            <span style={{ color: '#666', fontSize: '14px' }}>
-                                共 {filteredData.length} 条记录
-                            </span>
-                        </div>
-                    </div>
-
-                    {/* 数据表格 */}
-                    <Table
-                        columns={getColumns()}
-                        dataSource={filteredData}
-                        pagination={{
-                            total: filteredData.length,
-                            pageSize: 10,
-                            showSizeChanger: true,
-                            showTotal: (total) => `共 ${total} 条`,
-                            showQuickJumper: true
-                        }}
-                        scroll={{ x: 'max-content' }}
-                    />
-
-                    {/* 详情抽屉 */}
-                    <Drawer
-                        title="记录详情"
-                        placement="right"
-                        width={500}
+                    {/* 详情弹窗 - 改为聊天记录展示形式 */}
+                    <Modal
+                        title={
+                            <div style={{ textAlign: 'center', width: '100%', fontWeight: 600 }}>
+                                会话记录详情
+                            </div>
+                        }
                         open={detailDrawerVisible}
-                        onClose={() => setDetailDrawerVisible(false)}
+                        onCancel={() => setDetailDrawerVisible(false)}
+                        footer={null}
+                        centered
+                        width={900}
+                        wrapClassName="detail-modal"
+                        bodyStyle={{ padding: '0', display: 'flex', flexDirection: 'column' }}
                     >
                         {selectedRecord && (
-                            <div>
-                                <div style={{ marginBottom: '16px' }}>
-                                    <div style={{ color: '#8c8c8c', fontSize: '13px', marginBottom: '4px' }}>
-                                        {activeTab === 'sensitive_word' ? '触发敏感词' : '触发行为'}
-                                    </div>
-                                    <div style={{ fontSize: '14px', color: '#262626' }}>{selectedRecord.sensitiveWord}</div>
-                                </div>
-                                <div style={{ marginBottom: '16px' }}>
-                                    <div style={{ color: '#8c8c8c', fontSize: '13px', marginBottom: '4px' }}>命中规则</div>
-                                    <div style={{ fontSize: '14px', color: '#262626' }}>{selectedRecord.hitRule}</div>
-                                </div>
-                                <div style={{ marginBottom: '16px' }}>
-                                    <div style={{ color: '#8c8c8c', fontSize: '13px', marginBottom: '4px' }}>
-                                        {activeTab === 'sensitive_word' ? '发送人' : '触发人'}
-                                    </div>
-                                    <div style={{ fontSize: '14px', color: '#262626' }}>
-                                        {activeTab === 'sensitive_word' ? (
-                                            selectedRecord.senderType === 'employee' ? (
-                                                selectedRecord.employeeName
-                                            ) : (
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                    {selectedRecord.avatar ? (
-                                                        <img 
-                                                            src={selectedRecord.avatar} 
-                                                            alt={selectedRecord.sourceName}
-                                                            style={{ 
-                                                                width: '24px', 
-                                                                height: '24px', 
-                                                                borderRadius: '50%',
-                                                                objectFit: 'cover'
-                                                            }}
-                                                        />
-                                                    ) : (
-                                                        <Avatar 
-                                                            size={24}
-                                                            style={{ 
-                                                                backgroundColor: '#1890ff',
-                                                                fontSize: '11px'
-                                                            }}
-                                                        >
-                                                            {selectedRecord.sourceName.charAt(0)}
-                                                        </Avatar>
-                                                    )}
-                                                    <span>{selectedRecord.sourceName}</span>
-                                                    <span style={{ color: '#52c41a', fontSize: '11px' }}>@微信</span>
-                                                </div>
-                                            )
-                                        ) : (
-                                            selectedRecord.employeeName
-                                        )}
-                                    </div>
-                                </div>
-                                {activeTab === 'sensitive_word' && (
-                                    <div style={{ marginBottom: '16px' }}>
-                                        <div style={{ color: '#8c8c8c', fontSize: '13px', marginBottom: '4px' }}>员工</div>
-                                        <div style={{ fontSize: '14px', color: '#262626' }}>{selectedRecord.employeeName}</div>
-                                    </div>
-                                )}
-                                <div style={{ marginBottom: '16px' }}>
-                                    <div style={{ color: '#8c8c8c', fontSize: '13px', marginBottom: '4px' }}>消息来源</div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        {selectedRecord.avatar ? (
-                                            <img 
-                                                src={selectedRecord.avatar} 
-                                                alt={selectedRecord.sourceName}
-                                                style={{ 
-                                                    width: '32px', 
-                                                    height: '32px', 
-                                                    borderRadius: '50%',
-                                                    objectFit: 'cover'
-                                                }}
-                                            />
-                                        ) : (
-                                            <Avatar 
-                                                size={32}
-                                                style={{ 
-                                                    backgroundColor: selectedRecord.sourceType === 'group' ? '#52c41a' : '#1890ff',
-                                                    fontSize: '14px'
-                                                }}
-                                            >
-                                                {selectedRecord.sourceType === 'group' ? '群' : selectedRecord.sourceName.charAt(0)}
-                                            </Avatar>
-                                        )}
-                                        <div>
-                                            <span style={{ fontSize: '14px', color: '#262626' }}>{selectedRecord.sourceName}</span>
-                                            {selectedRecord.senderType === 'wechat_customer' && (
-                                                <span style={{ color: '#52c41a', fontSize: '12px', marginLeft: '4px' }}>@微信</span>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-                                <div style={{ marginBottom: '16px' }}>
-                                    <div style={{ color: '#8c8c8c', fontSize: '13px', marginBottom: '4px' }}>审核结果</div>
-                                    <div style={{ 
-                                        fontSize: '14px', 
-                                        color: auditStatusMap[selectedRecord.auditStatus].color,
-                                        fontWeight: 500
-                                    }}>
-                                        {auditStatusMap[selectedRecord.auditStatus].text}
-                                    </div>
-                                </div>
-                                <div style={{ marginBottom: '16px' }}>
-                                    <div style={{ color: '#8c8c8c', fontSize: '13px', marginBottom: '4px' }}>
-                                        {activeTab === 'sensitive_word' ? '发送时间' : '触发时间'}
-                                    </div>
-                                    <div style={{ fontSize: '14px', color: '#262626' }}>{selectedRecord.sendTime}</div>
-                                </div>
-                            </div>
+                            <ChatRecordDetail 
+                                record={selectedRecord} 
+                                activeTab={activeTab}
+                                onSaveAudit={handleSaveAudit}
+                            />
                         )}
-                    </Drawer>
+                    </Modal>
                 </div>
             );
         };
