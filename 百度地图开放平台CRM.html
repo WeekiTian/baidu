@@ -8583,12 +8583,12 @@
                 {
                     key: '2',
                     sensitiveWord: '价格优惠',
-                    hitRule: '敏感词规则-价格',
+                    hitRule: '敏感词规则 - 价格',
                     senderType: 'wechat_customer',
                     employeeName: '王伟军',
-                    sourceName: '客户交流群',
+                    sourceName: '阳光灿烂的日子',
                     sourceType: 'group',
-                    avatar: null,
+                    avatar: 'https://i.pravatar.cc/150?img=25',
                     auditStatus: 'no_risk',
                     sendTime: '2026/03/19 13:20:15'
                 },
@@ -8634,9 +8634,9 @@
                     hitRule: '广告违规规则',
                     senderType: 'wechat_customer',
                     employeeName: '王晨',
-                    sourceName: 'VIP客户群',
+                    sourceName: '春暖花开',
                     sourceType: 'group',
-                    avatar: null,
+                    avatar: 'https://i.pravatar.cc/150?img=32',
                     auditStatus: 'violation',
                     sendTime: '2026/03/17 15:10:20'
                 },
@@ -8671,12 +8671,12 @@
                 {
                     key: '1',
                     sensitiveWord: '频繁添加好友',
-                    hitRule: '敏感行为规则-频繁操作',
+                    hitRule: '敏感行为规则 - 频繁操作',
                     senderType: 'wechat_customer',
                     employeeName: '李想',
-                    sourceName: '客户福利群',
+                    sourceName: '清风徐来',
                     sourceType: 'group',
-                    avatar: null,
+                    avatar: 'https://i.pravatar.cc/150?img=48',
                     auditStatus: 'pending',
                     sendTime: '2026/03/19 14:25:00'
                 },
@@ -8719,12 +8719,12 @@
                 {
                     key: '5',
                     sensitiveWord: '拉群',
-                    hitRule: '敏感行为规则-异常操作',
+                    hitRule: '敏感行为规则 - 异常操作',
                     senderType: 'wechat_customer',
                     employeeName: '周杰',
-                    sourceName: '产品咨询群',
+                    sourceName: '云卷云舒',
                     sourceType: 'group',
-                    avatar: null,
+                    avatar: 'https://i.pravatar.cc/150?img=53',
                     auditStatus: 'violation',
                     sendTime: '2026/03/17 09:30:10'
                 },
@@ -8847,15 +8847,8 @@
                                     </Avatar>
                                 )}
                                 <span>{record.sourceName}</span>
-                                {record.sourceType === 'group' ? (
-                                    <span style={{ 
-                                        marginLeft: '6px', 
-                                        padding: '1px 6px', 
-                                        backgroundColor: '#52c41a', 
-                                        color: '#fff', 
-                                        borderRadius: '3px',
-                                        fontSize: '11px'
-                                    }}>群聊</span>
+                                {record.sourceType === 'group' && !record.avatar ? (
+                                    <span style={{ color: '#52c41a', fontSize: '11px' }}>@微信</span>
                                 ) : (
                                     <span style={{ color: '#52c41a', fontSize: '11px' }}>@微信</span>
                                 )}
@@ -8903,15 +8896,8 @@
                                 )}
                                 <span>
                                     {name}
-                                    {record.sourceType === 'group' ? (
-                                        <span style={{ 
-                                            marginLeft: '6px', 
-                                            padding: '1px 6px', 
-                                            backgroundColor: '#52c41a', 
-                                            color: '#fff', 
-                                            borderRadius: '3px',
-                                            fontSize: '11px'
-                                        }}>群聊</span>
+                                    {record.sourceType === 'group' && !record.avatar ? (
+                                        <span style={{ color: '#52c41a', fontSize: '12px', fontWeight: '500' }}>@微信</span>
                                     ) : (
                                         <span style={{ color: '#52c41a', fontSize: '12px', fontWeight: '500' }}>@微信</span>
                                     )}
@@ -9009,15 +8995,8 @@
                                     </Avatar>
                                 )}
                                 <span>{record.sourceName}</span>
-                                {record.sourceType === 'group' ? (
-                                    <span style={{ 
-                                        marginLeft: '6px', 
-                                        padding: '1px 6px', 
-                                        backgroundColor: '#52c41a', 
-                                        color: '#fff', 
-                                        borderRadius: '3px',
-                                        fontSize: '11px'
-                                    }}>群聊</span>
+                                {record.sourceType === 'group' && !record.avatar ? (
+                                    <span style={{ color: '#52c41a', fontSize: '11px' }}>@微信</span>
                                 ) : (
                                     <span style={{ color: '#52c41a', fontSize: '11px' }}>@微信</span>
                                 )}
@@ -9056,15 +9035,8 @@
                             )}
                             <span>
                                 {name}
-                                {record.sourceType === 'group' ? (
-                                    <span style={{ 
-                                        marginLeft: '6px', 
-                                        padding: '1px 6px', 
-                                        backgroundColor: '#52c41a', 
-                                        color: '#fff', 
-                                        borderRadius: '3px',
-                                        fontSize: '11px'
-                                    }}>群聊</span>
+                                {record.sourceType === 'group' && !record.avatar ? (
+                                    <span style={{ color: '#52c41a', fontSize: '12px', fontWeight: '500' }}>@微信</span>
                                 ) : (
                                     <span style={{ color: '#52c41a', fontSize: '12px', fontWeight: '500' }}>@微信</span>
                                 )}
