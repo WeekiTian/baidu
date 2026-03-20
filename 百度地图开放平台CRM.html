@@ -1050,7 +1050,7 @@
 
     <script type="text/babel">
         const { useState, useEffect, useMemo } = React;
-        const { Layout, Menu, Button, Input, Table, Select, Space, Badge, ConfigProvider, Form, Radio, TreeSelect, Tag, message, Drawer, Avatar, Modal, Popover, Checkbox, Tabs, DatePicker, Pagination } = antd;
+        const { Layout, Menu, Button, Input, Table, Select, Space, Badge, ConfigProvider, Form, Radio, TreeSelect, Tag, message, Drawer, Avatar, Modal, Popover, Popconfirm, Checkbox, Tabs, DatePicker, Pagination } = antd;
         const { Header, Sider, Content } = Layout;
         const { Search } = Input;
         const { Option } = Select;
@@ -8597,7 +8597,7 @@
             const [chatMatchCount, setChatMatchCount] = useState(0);
             const [chatCurrentMatchIndex, setChatCurrentMatchIndex] = useState(0);
             const [chatMatchRefs, setChatMatchRefs] = useState([]);
-            const [auditResult, setAuditResult] = useState(record.auditStatus || 'pending');
+            const [auditResult, setAuditResult] = useState(undefined);
             const [auditRemark, setAuditRemark] = useState('');
             const [charCount, setCharCount] = useState(0);
 
@@ -8826,7 +8826,7 @@
 
             // 保存审核结果
             const handleSave = () => {
-                if (!auditResult || auditResult === 'pending') {
+                if (!auditResult) {
                     message.warning('请选择审核结果');
                     return;
                 }
@@ -8842,7 +8842,7 @@
             };
 
             // 检查保存按钮是否可用
-            const isSaveDisabled = !auditResult || auditResult === 'pending';
+            const isSaveDisabled = !auditResult;
 
             // 获取头像
             const getAvatar = (msg) => {
@@ -9017,21 +9017,20 @@
                         <div style={{
                             marginBottom: '16px',
                             display: 'flex',
-                            alignItems: 'center',
-                            flexWrap: 'nowrap'
+                            alignItems: 'center'
                         }}>
                             <div style={{
-                                width: '70px',
                                 color: '#8c8c8c',
                                 fontSize: '14px',
-                                flexShrink: 0
+                                flexShrink: 0,
+                                marginRight: '8px',
+                                whiteSpace: 'nowrap'
                             }}>
                                 审核结果：<span style={{ color: '#ff4d4f', marginLeft: '2px' }}>*</span>
                             </div>
                             <Radio.Group
                                 value={auditResult}
                                 onChange={(e) => setAuditResult(e.target.value)}
-                                style={{ whiteSpace: 'nowrap' }}
                             >
                                 <Radio value="no_risk">无风险</Radio>
                                 <Radio value="violation">违规</Radio>
@@ -9044,11 +9043,12 @@
                             alignItems: 'flex-start'
                         }}>
                             <div style={{
-                                width: '70px',
                                 color: '#8c8c8c',
                                 fontSize: '14px',
                                 flexShrink: 0,
-                                paddingTop: '8px'
+                                paddingTop: '8px',
+                                marginRight: '8px',
+                                whiteSpace: 'nowrap'
                             }}>
                                 备注：
                             </div>
@@ -9060,14 +9060,14 @@
                                     rows={3}
                                     maxLength={500}
                                     showCount={false}
-                                    style={{ 
+                                    style={{
                                         resize: 'none',
                                         fontFamily: 'monospace'
                                     }}
                                 />
-                                <div style={{ 
-                                    textAlign: 'right', 
-                                    fontSize: '12px', 
+                                <div style={{
+                                    textAlign: 'right',
+                                    fontSize: '12px',
                                     color: charCount > 450 ? '#ff4d4f' : '#8c8c8c',
                                     marginTop: '4px'
                                 }}>
@@ -9109,6 +9109,7 @@
             const [searchKeyword, setSearchKeyword] = useState('');
             const [dateRange, setDateRange] = useState(null);
             const [auditStatus, setAuditStatus] = useState('all');
+            const [behaviorFilter, setBehaviorFilter] = useState('全部'); // 敏感行为筛选
             const [detailDrawerVisible, setDetailDrawerVisible] = useState(false);
             const [selectedRecord, setSelectedRecord] = useState(null);
             const [sensitiveWordData, setSensitiveWordData] = useState([
@@ -9134,6 +9135,7 @@
                     sourceType: 'single',
                     avatar: 'https://i.pravatar.cc/150?img=25',
                     auditStatus: 'no_risk',
+                    auditRemark: '客户咨询正常价格信息，属于正常业务沟通范围',
                     sendTime: '2026/03/19 13:20:15'
                 },
                 {
@@ -9146,6 +9148,7 @@
                     sourceType: 'group',
                     avatar: null,
                     auditStatus: 'violation',
+                    auditRemark: '明确提及返利金额，违反公司利益相关规范，已告知员工注意措辞',
                     sendTime: '2026/03/19 11:45:30'
                 },
                 {
@@ -9170,6 +9173,7 @@
                     sourceType: 'group',
                     avatar: null,
                     auditStatus: 'no_risk',
+                    auditRemark: '客户发送的节日红包封面，无实际金额，属于正常祝福',
                     sendTime: '2026/03/18 10:30:45'
                 },
                 {
@@ -9182,6 +9186,7 @@
                     sourceType: 'single',
                     avatar: 'https://i.pravatar.cc/150?img=32',
                     auditStatus: 'violation',
+                    auditRemark: '涉嫌虚假抽奖活动，已通知客户删除相关记录',
                     sendTime: '2026/03/17 15:10:20'
                 },
                 {
@@ -9206,6 +9211,7 @@
                     sourceType: 'single',
                     avatar: 'https://i.pravatar.cc/150?img=12',
                     auditStatus: 'no_risk',
+                    auditRemark: '客户询问是否支持私聊功能，属于正常咨询',
                     sendTime: '2026/03/16 14:50:15'
                 }
             ]);
@@ -9234,6 +9240,7 @@
                     sourceType: 'group',
                     avatar: 'https://i.pravatar.cc/150?img=4',
                     auditStatus: 'violation',
+                    auditRemark: '员工误删客户，已通知主管并安排客户回访，已对员工进行批评教育',
                     sendTime: '2026/03/19 10:15:30'
                 },
                 {
@@ -9246,12 +9253,13 @@
                     sourceType: 'single',
                     avatar: 'https://i.pravatar.cc/150?img=6',
                     auditStatus: 'no_risk',
+                    auditRemark: '客户主动发送的名片，属于正常信息交换',
                     sendTime: '2026/03/18 16:40:20'
                 },
                 {
                     key: '4',
-                    sensitiveWord: '转发聊天记录',
-                    hitRule: '敏感行为规则-信息泄露',
+                    sensitiveWord: '撤回聊天记录',
+                    hitRule: '敏感行为规则-异常操作',
                     senderType: 'employee',
                     employeeName: '谢丽',
                     sourceName: '客服二组交流群',
@@ -9270,6 +9278,7 @@
                     sourceType: 'group',
                     avatar: 'https://i.pravatar.cc/150?img=53',
                     auditStatus: 'violation',
+                    auditRemark: '未经客户同意私自拉群，已要求员工立即解散该群并道歉',
                     sendTime: '2026/03/17 09:30:10'
                 },
                 {
@@ -9294,7 +9303,46 @@
                     sourceType: 'single',
                     avatar: 'https://i.pravatar.cc/150?img=13',
                     auditStatus: 'no_risk',
+                    auditRemark: '客户主动分享位置用于预约上门服务，属于正常业务需求',
                     sendTime: '2026/03/15 14:10:30'
+                },
+                {
+                    key: '8',
+                    sensitiveWord: '发送文件',
+                    hitRule: '敏感行为规则-信息泄露',
+                    senderType: 'employee',
+                    employeeName: '李想',
+                    sourceName: '技术交流群',
+                    sourceType: 'group',
+                    avatar: 'https://i.pravatar.cc/150?img=48',
+                    auditStatus: 'pending',
+                    sendTime: '2026/03/19 16:30:00'
+                },
+                {
+                    key: '9',
+                    sensitiveWord: '发送红包',
+                    hitRule: '敏感行为规则-利益',
+                    senderType: 'employee',
+                    employeeName: '王伟军',
+                    sourceName: '客户福利群',
+                    sourceType: 'group',
+                    avatar: 'https://i.pravatar.cc/150?img=4',
+                    auditStatus: 'no_risk',
+                    auditRemark: '公司统一发放的节日福利红包，符合公司福利政策',
+                    sendTime: '2026/03/18 15:45:20'
+                },
+                {
+                    key: '10',
+                    sensitiveWord: '接收红包',
+                    hitRule: '敏感行为规则-利益',
+                    senderType: 'wechat_customer',
+                    employeeName: '毛奇',
+                    sourceName: '红包领取群',
+                    sourceType: 'group',
+                    avatar: 'https://i.pravatar.cc/150?img=6',
+                    auditStatus: 'no_risk',
+                    auditRemark: '客户主动发送的小额红包用于测试功能，无利益输送',
+                    sendTime: '2026/03/17 12:20:15'
                 }
             ];
 
@@ -9307,6 +9355,21 @@
                     data = data.filter(item => 
                         item.sensitiveWord.toLowerCase().includes(searchKeyword.toLowerCase())
                     );
+                }
+                
+                // 敏感行为记录Tab下添加触发行为筛选
+                if (activeTab === 'sensitive_behavior' && behaviorFilter !== '全部') {
+                    const behaviorMap = {
+                        '员工删除客户': '删除客户',
+                        '员工撤回消息': '撤回聊天记录',
+                        '员工发送文件': '发送文件',
+                        '员工发送红包': '发送红包',
+                        '员工接收红包': '接收红包'
+                    };
+                    const filterKey = behaviorMap[behaviorFilter];
+                    if (filterKey) {
+                        data = data.filter(item => item.sensitiveWord.includes(filterKey));
+                    }
                 }
                 
                 if (auditStatus !== 'all') {
@@ -9573,40 +9636,7 @@
                     width: 140,
                     ellipsis: true,
                     render: (name, record) => (
-                        record.senderType === 'employee' ? (
-                            <span>{name}</span>
-                        ) : (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                {record.avatar ? (
-                                    <img 
-                                        src={record.avatar} 
-                                        alt={record.sourceName}
-                                        style={{ 
-                                            width: '24px', 
-                                            height: '24px', 
-                                            borderRadius: '50%',
-                                            objectFit: 'cover'
-                                        }}
-                                    />
-                                ) : (
-                                    <Avatar 
-                                        size={24}
-                                        style={{ 
-                                            backgroundColor: record.sourceType === 'group' ? '#52c41a' : '#1890ff',
-                                            fontSize: '11px'
-                                        }}
-                                    >
-                                        {record.sourceType === 'group' ? '群' : record.sourceName.charAt(0)}
-                                    </Avatar>
-                                )}
-                                <span>{record.sourceName}</span>
-                                {record.sourceType === 'group' && !record.avatar ? (
-                                    <span style={{ color: '#52c41a', fontSize: '11px' }}>@微信</span>
-                                ) : (
-                                    <span style={{ color: '#52c41a', fontSize: '11px' }}>@微信</span>
-                                )}
-                            </div>
-                        )
+                        <span>{name}</span>
                     )
                 },
                 {
@@ -9753,14 +9783,35 @@
                         <div className="search-section" style={{ marginBottom: 0 }}>
                             <div className="search-left">
                                 {activeTab === 'sensitive_word' && (
-                                    <Input
-                                        placeholder="查询触发的敏感词"
-                                        value={searchKeyword}
-                                        onChange={(e) => setSearchKeyword(e.target.value)}
-                                        style={{ width: 200 }}
-                                        allowClear
-                                    />
+                                    <>
+                                        <span style={{ color: '#666', fontSize: '14px', marginRight: '8px' }}>敏感词:</span>
+                                        <Input
+                                            placeholder="查询触发的敏感词"
+                                            value={searchKeyword}
+                                            onChange={(e) => setSearchKeyword(e.target.value)}
+                                            style={{ width: 200 }}
+                                            allowClear
+                                        />
+                                    </>
                                 )}
+                                {activeTab === 'sensitive_behavior' && (
+                                    <>
+                                        <span style={{ color: '#666', fontSize: '14px', marginRight: '8px' }}>触发行为:</span>
+                                        <Select
+                                            value={behaviorFilter}
+                                            onChange={setBehaviorFilter}
+                                            style={{ width: 160 }}
+                                        >
+                                            <Option value="全部">全部</Option>
+                                            <Option value="员工删除客户">员工删除客户</Option>
+                                            <Option value="员工撤回消息">员工撤回消息</Option>
+                                            <Option value="员工发送文件">员工发送文件</Option>
+                                            <Option value="员工发送红包">员工发送红包</Option>
+                                            <Option value="员工接收红包">员工接收红包</Option>
+                                        </Select>
+                                    </>
+                                )}
+                                <span style={{ color: '#666', fontSize: '14px', marginRight: '8px' }}>{activeTab === 'sensitive_word' ? '发送时间:' : '触发时间:'}</span>
                                 <DatePicker.RangePicker
                                     value={dateRange}
                                     onChange={setDateRange}
@@ -9789,13 +9840,6 @@
                         borderBottom: '1px solid #f0f0f0',
                         flexShrink: 0
                     }}>
-                        <div className="table-actions" style={{ marginBottom: 0 }}>
-                            <div className="table-actions-left">
-                                <span style={{ color: '#666', fontSize: '14px' }}>
-                                    共 {filteredData.length} 条记录
-                                </span>
-                            </div>
-                        </div>
                     </div>
             
                     {/* 可滚动列表区域 */}
@@ -9844,6 +9888,7 @@
                         centered
                         width={900}
                         wrapClassName="detail-modal"
+                        style={{ marginTop: '50px', marginBottom: '50px' }}
                         bodyStyle={{ padding: '0', display: 'flex', flexDirection: 'column' }}
                     >
                         {selectedRecord && (
@@ -12391,6 +12436,459 @@
             );
         };
 
+        // 沉默提醒设置组件
+        const SilenceReminderSettings = () => {
+            const [addModalVisible, setAddModalVisible] = useState(false);
+            const [editRecord, setEditRecord] = useState(null);
+            const [deletePopoverVisible, setDeletePopoverVisible] = useState({});
+            const [showOtherMembers, setShowOtherMembers] = useState(false);
+
+            // 规则数据（包含系统字段）
+            const [rules, setRules] = useState([
+                {
+                    id: 1,
+                    days: 7,
+                    scope: ['dept1-1'],
+                    scopeNames: ['销售部'],
+                    notifySelf: true,
+                    notifyOthers: false,
+                    otherMembers: [],
+                    otherMembersNames: [],
+                    creator: '管理员',
+                    createTime: '2026-01-10 10:30:00',
+                    modifier: '管理员',
+                    modifyTime: '2026-01-15 14:20:00'
+                },
+                {
+                    id: 2,
+                    days: 14,
+                    scope: ['dept1'],
+                    scopeNames: ['全公司'],
+                    notifySelf: true,
+                    notifyOthers: true,
+                    otherMembers: ['emp1', 'emp2'],
+                    otherMembersNames: ['李想', '王伟军'],
+                    creator: '管理员',
+                    createTime: '2026-01-11 11:00:00',
+                    modifier: '管理员',
+                    modifyTime: '2026-01-12 16:30:00'
+                }
+            ]);
+
+            // 员工列表（用于提醒成员选择）
+            const employeeList = [
+                { id: 'emp1', name: '李想' },
+                { id: 'emp2', name: '王伟军' },
+                { id: 'emp3', name: '毛奇' },
+                { id: 'emp4', name: '谢丽' },
+                { id: 'emp5', name: '周杰' },
+                { id: 'emp6', name: '陈明' },
+                { id: 'emp7', name: '赵敏' },
+                { id: 'emp8', name: '钱刚' }
+            ];
+
+            // 组织架构树
+            const [departmentTree] = useState([
+                {
+                    title: '全公司',
+                    value: 'dept1',
+                    key: 'dept1',
+                    children: [
+                        {
+                            title: '销售部',
+                            value: 'dept1-1',
+                            key: 'dept1-1',
+                            children: [
+                                { title: '销售一组', value: 'dept1-1-1', key: 'dept1-1-1', children: [
+                                    { title: '李想', value: 'emp1', key: 'emp1', isLeaf: true },
+                                    { title: '王伟军', value: 'emp2', key: 'emp2', isLeaf: true }
+                                ]},
+                                { title: '销售二组', value: 'dept1-1-2', key: 'dept1-1-2', children: [
+                                    { title: '毛奇', value: 'emp3', key: 'emp3', isLeaf: true },
+                                    { title: '谢丽', value: 'emp4', key: 'emp4', isLeaf: true }
+                                ]}
+                            ]
+                        },
+                        {
+                            title: '技术部',
+                            value: 'dept1-2',
+                            key: 'dept1-2',
+                            children: [
+                                { title: '研发组', value: 'dept1-2-1', key: 'dept1-2-1', children: [
+                                    { title: '周杰', value: 'emp5', key: 'emp5', isLeaf: true }
+                                ]},
+                                { title: '测试组', value: 'dept1-2-2', key: 'dept1-2-2', children: [
+                                    { title: '陈明', value: 'emp6', key: 'emp6', isLeaf: true }
+                                ]}
+                            ]
+                        },
+                        { title: '客服部', value: 'dept1-3', key: 'dept1-3', children: [
+                            { title: '赵敏', value: 'emp7', key: 'emp7', isLeaf: true }
+                        ]},
+                        { title: '财务部', value: 'dept1-4', key: 'dept1-4', children: [
+                            { title: '钱刚', value: 'emp8', key: 'emp8', isLeaf: true }
+                        ]}
+                    ]
+                }
+            ]);
+
+            // 表单状态
+            const [form] = Form.useForm();
+            const [formValues, setFormValues] = useState({
+                days: '',
+                scope: [],
+                notifySelf: true,
+                notifyOthers: false,
+                otherMembers: []
+            });
+
+            // 刷新图标
+            useEffect(() => {
+                setTimeout(() => {
+                    if (window.lucide) {
+                        window.lucide.createIcons();
+                    }
+                }, 100);
+            }, [addModalVisible, deletePopoverVisible]);
+
+            // 规则列表（不过滤）
+
+            // 表格列定义
+            const columns = [
+                {
+                    title: '与微信客户未主动联系天数',
+                    dataIndex: 'days',
+                    key: 'days',
+                    width: 180,
+                    render: (days) => (
+                        <span>{days} 天</span>
+                    )
+                },
+                {
+                    title: '规则适用范围',
+                    dataIndex: 'scopeNames',
+                    key: 'scopeNames',
+                    width: 200,
+                    render: (scopeNames) => (
+                        <span style={{ color: '#1890ff' }}>
+                            {scopeNames.join('、')}
+                        </span>
+                    )
+                },
+                {
+                    title: '提醒成员',
+                    dataIndex: 'notifyInfo',
+                    key: 'notifyInfo',
+                    width: 200,
+                    render: (_, record) => (
+                        <span>
+                            员工本人
+                            {record.notifyOthers && record.otherMembersNames?.length > 0 && (
+                                <span>、{record.otherMembersNames.join('、')}</span>
+                            )}
+                        </span>
+                    )
+                },
+                {
+                    title: '创建人',
+                    dataIndex: 'creator',
+                    key: 'creator',
+                    width: 100
+                },
+                {
+                    title: '创建时间',
+                    dataIndex: 'createTime',
+                    key: 'createTime',
+                    width: 180
+                },
+                {
+                    title: '修改人',
+                    dataIndex: 'modifier',
+                    key: 'modifier',
+                    width: 100
+                },
+                {
+                    title: '修改时间',
+                    dataIndex: 'modifyTime',
+                    key: 'modifyTime',
+                    width: 180
+                },
+                {
+                    title: '操作',
+                    key: 'action',
+                    width: 120,
+                    align: 'center',
+                    render: (_, record) => (
+                        <Space>
+                            <Button
+                                type="link"
+                                size="small"
+                                onClick={() => {
+                                    setEditRecord(record);
+                                    setShowOtherMembers(record.notifyOthers || false);
+                                    setFormValues({
+                                        days: record.days,
+                                        scope: record.scope,
+                                        notifySelf: record.notifySelf,
+                                        notifyOthers: record.notifyOthers,
+                                        otherMembers: record.otherMembers
+                                    });
+                                    form.setFieldsValue({
+                                        days: record.days,
+                                        scope: record.scope,
+                                        notifySelf: record.notifySelf,
+                                        notifyOthers: record.notifyOthers,
+                                        otherMembers: record.otherMembers
+                                    });
+                                    setAddModalVisible(true);
+                                }}
+                                style={{ padding: '0 4px' }}
+                            >
+                                编辑
+                            </Button>
+                            <Popover
+                                content={
+                                    <div style={{ padding: '8px 0', minWidth: '200px' }}>
+                                        <div style={{ marginBottom: '12px', color: '#595959', fontSize: '14px' }}>
+                                            删除后将无法恢复，是否确定删除？
+                                        </div>
+                                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                                            <Button
+                                                size="small"
+                                                onClick={() => setDeletePopoverVisible({ ...deletePopoverVisible, [record.id]: false })}
+                                            >
+                                                取消
+                                            </Button>
+                                            <Button
+                                                size="small"
+                                                type="primary"
+                                                danger
+                                                onClick={() => {
+                                                    setRules(rules.filter(item => item.id !== record.id));
+                                                    setDeletePopoverVisible({ ...deletePopoverVisible, [record.id]: false });
+                                                    message.success('删除成功');
+                                                }}
+                                            >
+                                                删除
+                                            </Button>
+                                        </div>
+                                    </div>
+                                }
+                                title={null}
+                                trigger="click"
+                                open={deletePopoverVisible[record.id]}
+                                onOpenChange={(open) => setDeletePopoverVisible({ ...deletePopoverVisible, [record.id]: open })}
+                                placement="bottomRight"
+                            >
+                                <Button type="text" size="small" danger>
+                                    删除
+                                </Button>
+                            </Popover>
+                        </Space>
+                    )
+                }
+            ];
+
+            // 打开新增弹窗
+            const openAddModal = () => {
+                setEditRecord(null);
+                setShowOtherMembers(false);
+                setFormValues({ days: '', scope: [], notifySelf: true, notifyOthers: false, otherMembers: [] });
+                form.resetFields();
+                setTimeout(() => {
+                    form.setFieldsValue({
+                        days: '',
+                        scope: [],
+                        notifySelf: true,
+                        notifyOthers: false,
+                        otherMembers: []
+                    });
+                }, 0);
+                setAddModalVisible(true);
+            };
+
+            // 提交表单
+            const handleSubmit = async () => {
+                try {
+                    const values = await form.validateFields();
+                    if (editRecord) {
+                        // 编辑模式
+                        setRules(rules.map(item =>
+                            item.id === editRecord.id
+                                ? {
+                                    ...item,
+                                    days: values.days,
+                                    scope: values.scope || [],
+                                    scopeNames: getScopeNames(values.scope),
+                                    notifySelf: true,
+                                    notifyOthers: values.notifyOthers || false,
+                                    otherMembers: values.otherMembers || [],
+                                    otherMembersNames: getMemberNames(values.otherMembers),
+                                    modifier: '管理员',
+                                    modifyTime: new Date().toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }).replace(/\//g, '-')
+                                }
+                                : item
+                        ));
+                        message.success('修改成功');
+                    } else {
+                        // 新增模式
+                        const newRule = {
+                            id: Date.now(),
+                            days: values.days,
+                            scope: values.scope || [],
+                            scopeNames: getScopeNames(values.scope),
+                            notifySelf: true,
+                            notifyOthers: values.notifyOthers || false,
+                            otherMembers: values.otherMembers || [],
+                            otherMembersNames: getMemberNames(values.otherMembers),
+                            creator: '管理员',
+                            createTime: new Date().toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }).replace(/\//g, '-'),
+                            modifier: '管理员',
+                            modifyTime: new Date().toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }).replace(/\//g, '-')
+                        };
+                        setRules([newRule, ...rules]);
+                        message.success('新增成功');
+                    }
+                    setAddModalVisible(false);
+                } catch (error) {
+                    console.error('表单验证失败:', error);
+                }
+            };
+
+            // 根据选中的scope获取名称
+            const getScopeNames = (scopeValues) => {
+                if (!scopeValues || scopeValues.length === 0) return ['全公司'];
+                const names = [];
+                const findNames = (nodes, vals) => {
+                    nodes.forEach(node => {
+                        if (vals.includes(node.value)) {
+                            names.push(node.title);
+                        }
+                        if (node.children) {
+                            findNames(node.children, vals);
+                        }
+                    });
+                };
+                findNames(departmentTree, scopeValues || []);
+                return names.length > 0 ? names : ['全公司'];
+            };
+
+            // 获取成员名称
+            const getMemberNames = (memberValues) => {
+                if (!memberValues || memberValues.length === 0) return [];
+                return employeeList.filter(emp => memberValues.includes(emp.id)).map(emp => emp.name);
+            };
+
+            return (
+                <div className="content-card">
+                    <div className="fixed-header">
+                        <h1 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '12px', color: '#262626' }}>
+                            沉默提醒设置
+                        </h1>
+                        <div style={{ color: '#999', fontSize: '13px', marginBottom: '12px' }}>
+                            设置员工与微信客户长时间未主动联系时的提醒规则。
+                        </div>
+                    </div>
+
+                    {/* 筛选区域 */}
+                    <div className="search-section">
+                        <div className="search-right">
+                            <Button
+                                type="primary"
+                                icon={<i data-lucide="plus" style={{ width: '14px', height: '14px' }}></i>}
+                                onClick={openAddModal}
+                            >
+                                添加规则
+                            </Button>
+                        </div>
+                    </div>
+
+                    {/* 表格 */}
+                    <Table
+                        columns={columns}
+                        dataSource={rules}
+                        rowKey="id"
+                        pagination={{
+                            total: rules.length,
+                            pageSize: 10,
+                            showSizeChanger: true,
+                            showTotal: (total) => `共 ${total} 条`,
+                            showQuickJumper: true
+                        }}
+                        scroll={{ x: 1200 }}
+                    />
+
+                    {/* 新建/编辑弹窗 */}
+                    <Modal
+                        title={editRecord ? '编辑规则' : '添加规则'}
+                        open={addModalVisible}
+                        onOk={handleSubmit}
+                        onCancel={() => setAddModalVisible(false)}
+                        okText="确定"
+                        cancelText="取消"
+                        width={560}
+                    >
+                        <Form
+                            form={form}
+                            layout="vertical"
+                            initialValues={formValues}
+                        >
+                            <Form.Item
+                                name="days"
+                                label="与微信客户未主动联系天数"
+                                rules={[{ required: true, message: '请输入与微信客户未主动联系天数' }]}
+                            >
+                                <Input type="number" placeholder="请输入天数" min={1} suffix={<span style={{ color: '#999' }}>天</span>} />
+                            </Form.Item>
+                            <Form.Item
+                                name="scope"
+                                label="规则适用范围"
+                                rules={[{ required: true, message: '请选择规则适用范围' }]}
+                            >
+                                <TreeSelect
+                                    treeData={departmentTree}
+                                    treeCheckable
+                                    showCheckedStrategy={TreeSelect.SHOW_CHILD}
+                                    placeholder="请选择适用范围"
+                                    style={{ width: '100%' }}
+                                    dropdownStyle={{ maxHeight: 400, overflow: 'auto' }}
+                                />
+                            </Form.Item>
+                            <Form.Item
+                                label="提醒成员"
+                            >
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                    <div style={{ display: 'flex', gap: '24px' }}>
+                                        <Checkbox checked={true} disabled>
+                                            员工本人
+                                        </Checkbox>
+                                        <Form.Item name="notifyOthers" valuePropName="checked" noStyle>
+                                            <Checkbox onChange={(e) => setShowOtherMembers(e.target.checked)}>
+                                                其他成员
+                                            </Checkbox>
+                                        </Form.Item>
+                                    </div>
+                                    {showOtherMembers && (
+                                        <Form.Item name="otherMembers" noStyle>
+                                            <Select
+                                                mode="multiple"
+                                                placeholder="请选择提醒的其他成员"
+                                                style={{ width: '100%' }}
+                                            >
+                                                {employeeList.map(emp => (
+                                                    <Option key={emp.id} value={emp.id}>{emp.name}</Option>
+                                                ))}
+                                            </Select>
+                                        </Form.Item>
+                                    )}
+                                </div>
+                            </Form.Item>
+                        </Form>
+                    </Modal>
+                </div>
+            );
+        };
+
         // 敏感行为设置组件
         const SensitiveBehaviorSettings = () => {
             const [searchKeyword, setSearchKeyword] = useState('');
@@ -12774,10 +13272,10 @@
                     {/* 表格 */}
                     <Table
                         columns={columns}
-                        dataSource={filteredRules}
+                        dataSource={rules}
                         rowKey="id"
                         pagination={{
-                            total: filteredRules.length,
+                            total: rules.length,
                             pageSize: 10,
                             showSizeChanger: true,
                             showTotal: (total) => `共 ${total} 条`,
@@ -13038,7 +13536,7 @@
                     width: 180
                 },
                 {
-                    title: '敏感词',
+                    title: '拦截敏感词',
                     dataIndex: 'sensitiveWords',
                     key: 'sensitiveWords',
                     width: 200,
@@ -13052,7 +13550,7 @@
                     )
                 },
                 {
-                    title: '敏感行为',
+                    title: '额外拦截行为',
                     dataIndex: 'behaviors',
                     key: 'behaviors',
                     width: 220,
@@ -13272,7 +13770,7 @@
                 <div className="content-card">
                     <div className="fixed-header">
                         <h1 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '4px', color: '#262626' }}>
-                            内容拦截设置
+                            敏感词设置
                         </h1>
                         <div style={{ color: '#999', fontSize: '13px', marginBottom: '12px' }}>
                             敏感词的拦截记录需要到企业微信管理后台「客户与上下游-客户联系-安全管控-聊天敏感词」查看。
@@ -13291,7 +13789,7 @@
                                 allowClear
                             />
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                <span style={{ color: '#666', fontSize: 14 }}>拦截行为:</span>
+                                <span style={{ color: '#666', fontSize: 14 }}>额外拦截行为:</span>
                                 <Select
                                     value={behaviorFilter}
                                     onChange={setBehaviorFilter}
@@ -13321,7 +13819,7 @@
                                 icon={<i data-lucide="plus" style={{ width: '14px', height: '14px' }}></i>}
                                 onClick={openAddModal}
                             >
-                                新建拦截规则
+                                新建敏感词规则
                             </Button>
                         </div>
                     </div>
@@ -13329,21 +13827,22 @@
                     {/* 表格 */}
                     <Table
                         columns={columns}
-                        dataSource={filteredRules}
+                        dataSource={rules}
                         rowKey="id"
                         pagination={{
-                            total: filteredRules.length,
+                            total: rules.length,
                             pageSize: 10,
                             showSizeChanger: true,
                             showTotal: (total) => `共 ${total} 条`,
                             showQuickJumper: true
                         }}
-                        scroll={{ x: 1600 }}
+                        scroll={{ x: 1200 }}
                     />
+
 
                     {/* 新建/编辑弹窗 */}
                     <Modal
-                        title={editRecord ? '编辑拦截规则' : '新建拦截规则'}
+                        title={editRecord ? '编辑敏感词规则' : '新建敏感词规则'}
                         open={addModalVisible}
                         onOk={handleSubmit}
                         onCancel={() => setAddModalVisible(false)}
@@ -13365,19 +13864,22 @@
                             </Form.Item>
                             <Form.Item
                                 name="sensitiveWords"
-                                label="敏感词"
+                                label="拦截敏感词"
                                 rules={[{ required: true, message: '请输入敏感词' }]}
                             >
                                 <TextArea
                                     placeholder="请输入敏感词，多个词用回车分隔"
                                     rows={3}
-                                    maxLength={2000}
-                                    showCount
+                                    maxLength={300}
+                                    showCount={({ value, count, maxLength }) => {
+                                        const wordCount = value ? value.split('\n').filter(w => w.trim()).length : 0;
+                                        return `${wordCount} / 300 个词`;
+                                    }}
                                 />
                             </Form.Item>
                             <Form.Item
                                 name="behaviors"
-                                label="敏感行为"
+                                label="额外拦截行为"
                             >
                                 <Checkbox.Group options={[
                                     { value: 'employee_send_phone', label: '员工发送手机号' },
@@ -16969,6 +17471,64 @@
             );
         };
 
+        // 错误边界组件 - 防止白屏
+        class ErrorBoundary extends React.Component {
+            constructor(props) {
+                super(props);
+                this.state = { hasError: false, error: null };
+            }
+
+            static getDerivedStateFromError(error) {
+                return { hasError: true, error };
+            }
+
+            componentDidCatch(error, errorInfo) {
+                console.error('页面渲染错误:', error, errorInfo);
+            }
+
+            render() {
+                if (this.state.hasError) {
+                    return (
+                        <div style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            minHeight: '400px',
+                            padding: '40px',
+                            background: '#fff',
+                            margin: '8px 12px',
+                            borderRadius: '8px'
+                        }}>
+                            <div style={{ color: '#ff4d4f', fontSize: '48px', marginBottom: '16px' }}>
+                                <i data-lucide="alert-circle" style={{ width: '48px', height: '48px' }}></i>
+                            </div>
+                            <h2 style={{ fontSize: '18px', fontWeight: 500, color: '#262626', marginBottom: '8px' }}>
+                                页面渲染出错
+                            </h2>
+                            <p style={{ color: '#666', fontSize: '14px', marginBottom: '16px' }}>
+                                抱歉，页面加载时出现错误，请刷新页面重试。
+                            </p>
+                            <p style={{ color: '#999', fontSize: '12px', marginBottom: '16px' }}>
+                                错误信息: {this.state.error?.message || '未知错误'}
+                            </p>
+                            <Button
+                                type="primary"
+                                onClick={() => {
+                                    this.setState({ hasError: false, error: null });
+                                    window.location.reload();
+                                }}
+                            >
+                                刷新页面
+                            </Button>
+                        </div>
+                    );
+                }
+
+                return this.props.children;
+            }
+        }
+
         const App = () => {
             const [collapsed, setCollapsed] = useState(false);
             const [selectedKeys, setSelectedKeys] = useState(['workbench']);
@@ -17047,15 +17607,15 @@
                         { key: 'global_search', label: '全局搜索' },
                         { key: 'employee_chat_records', label: '聊天记录' },
                         { key: 'session_risk_records', label: '会话风险记录' },
-                        { key: 'silence_reminder', label: '沉默提醒' },
+                        { key: 'silence_reminder_records', label: '沉默提醒记录' },
                         { key: 'data_statistics', label: '数据统计' },
                         {
                             key: 'session_risk_settings',
                             label: '会话风险设置',
                             children: [
-                                { key: 'sensitive_word_settings', label: '敏感词设置' },
+                                { key: 'content_block_settings', label: '敏感词设置' },
                                 { key: 'sensitive_behavior_settings', label: '敏感行为设置' },
-                                { key: 'content_block_settings', label: '内容拦截设置' }
+                                { key: 'silence_reminder_settings', label: '沉默提醒设置' }
                             ]
                         }
                     ]
@@ -17413,7 +17973,16 @@
                                     mode="inline"
                                     selectedKeys={selectedKeys}
                                     openKeys={openKeys}
-                                    onSelect={({ key }) => setSelectedKeys([key])}
+                                    onSelect={({ key, keyPath }) => {
+                                        setSelectedKeys([key]);
+                                        // 自动展开父级菜单
+                                        if (keyPath && keyPath.length > 1) {
+                                            const parentKey = keyPath[keyPath.length - 1];
+                                            if (!openKeys.includes(parentKey)) {
+                                                setOpenKeys([...openKeys, parentKey]);
+                                            }
+                                        }
+                                    }}
                                     onOpenChange={(keys) => setOpenKeys(keys)}
                                     items={menuItems}
                                     theme="dark"
@@ -17458,6 +18027,7 @@
                                 </div>
                             </Header>
                             <Content className="main-content">
+                                <ErrorBoundary>
                                 {showWeChatClient ? (
                                     <WeChatClientPage onBack={() => setShowWeChatClient(false)} />
                                 ) : selectedKeys.includes('workbench') ? (
@@ -17468,12 +18038,12 @@
                                     <EmployeeChatRecords />
                                 ) : selectedKeys.includes('session_risk_records') ? (
                                     <SessionRiskRecords />
-                                ) : selectedKeys.includes('sensitive_word_settings') ? (
-                                    <SensitiveWordSettings />
-                                ) : selectedKeys.includes('sensitive_behavior_settings') ? (
-                                    <SensitiveBehaviorSettings />
                                 ) : selectedKeys.includes('content_block_settings') ? (
                                     <ContentBlockSettings />
+                                ) : selectedKeys.includes('sensitive_behavior_settings') ? (
+                                    <SensitiveBehaviorSettings />
+                                ) : selectedKeys.includes('silence_reminder_settings') ? (
+                                    <SilenceReminderSettings />
                                 ) : selectedKeys.includes('my_leads') ? (
                                     <MyLeads />
                                 ) : selectedKeys.includes('call_records') ? (
@@ -17562,6 +18132,7 @@
                                 ) : (
                                     <ComingSoon />
                                 )}
+                                </ErrorBoundary>
                             </Content>
                         </Layout>
                     </Layout>
