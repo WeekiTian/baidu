@@ -1057,6 +1057,765 @@
         const { RangePicker } = antd.DatePicker;
         const { TextArea } = Input;
 
+        // 数据统计页面组件
+        const DataStatistics = () => {
+            // 筛选状态
+            const [dateRange, setDateRange] = useState(null);
+            const [selectedEmployee, setSelectedEmployee] = useState(null);
+
+            // 图表维度切换状态
+            const [chartDimension, setChartDimension] = useState('day'); // 'day' | 'hour'
+
+            // 模拟统计数据（实际应从API获取）
+            const statsData = {
+                employeeInitiatedChats: 1286,        // 员工发起会话
+                employeeSentMessages: 34567,          // 员工发送消息数
+                replyRate: 78.5,                      // 已回复聊天占比（%）
+                avgFirstReplyTime: '5分23秒'          // 平均首次回复时长
+            };
+
+            // 指标解释文案
+            const indicatorTooltips = {
+                employeeInitiatedChats: '成员有主动发送过消息的单聊总数',
+                employeeSentMessages: '成员在单聊中发送的消息总数',
+                replyRate: '客户主动发起聊天后，成员在一个自然日内有回复过消息的聊天数/客户主动发起的聊天数比例，不包括群聊',
+                avgFirstReplyTime: '客户主动发起聊天后，成员在一个自然日内首次回复的时长间隔为首次回复时长，所有聊天的首次回复总时长/已回复的聊天总数即为平均首次回复时长，不包括群聊'
+            };
+
+            // 指标卡片配置
+            const indicatorCards = [
+                { key: 'employeeInitiatedChats', label: '员工发起会话', value: statsData.employeeInitiatedChats, unit: '' },
+                { key: 'employeeSentMessages', label: '员工发送消息数', value: statsData.employeeSentMessages.toLocaleString(), unit: '' },
+                { key: 'replyRate', label: '已回复聊天占比', value: statsData.replyRate, unit: '%' },
+                { key: 'avgFirstReplyTime', label: '平均首次回复时长', value: statsData.avgFirstReplyTime, unit: '' }
+            ];
+
+            // 部门/员工树形数据（模拟）
+            const treeData = [
+                {
+                    title: '全部',
+                    value: 'all',
+                    children: [
+                        {
+                            title: '销售部',
+                            value: 'sales',
+                            children: [
+                                { title: '李想', value: 'employee_1' },
+                                { title: '王伟军', value: 'employee_2' },
+                                { title: '毛奇', value: 'employee_3' }
+                            ]
+                        },
+                        {
+                            title: '客服部',
+                            value: 'service',
+                            children: [
+                                { title: '谢丽', value: 'employee_4' },
+                                { title: '周杰', value: 'employee_5' }
+                            ]
+                        },
+                        {
+                            title: '技术部',
+                            value: 'tech',
+                            children: [
+                                { title: '张明', value: 'employee_6' }
+                            ]
+                        }
+                    ]
+                }
+            ];
+
+            // 模拟图表数据 - 按天
+            const chartDataByDay = [
+                { date: '2026-03-17', employeeMsg: 1250, customerMsg: 980 },
+                { date: '2026-03-18', employeeMsg: 1380, customerMsg: 1120 },
+                { date: '2026-03-19', employeeMsg: 1520, customerMsg: 1280 },
+                { date: '2026-03-20', employeeMsg: 1180, customerMsg: 950 },
+                { date: '2026-03-21', employeeMsg: 1450, customerMsg: 1180 },
+                { date: '2026-03-22', employeeMsg: 1620, customerMsg: 1340 },
+                { date: '2026-03-23', employeeMsg: 1580, customerMsg: 1290 }
+            ];
+
+            // 模拟图表数据 - 按小时（当天数据，显示为时间段）
+            const chartDataByHour = [
+                { date: '08:00-09:00', employeeMsg: 85, customerMsg: 62 },
+                { date: '09:00-10:00', employeeMsg: 142, customerMsg: 118 },
+                { date: '10:00-11:00', employeeMsg: 178, customerMsg: 145 },
+                { date: '11:00-12:00', employeeMsg: 195, customerMsg: 162 },
+                { date: '12:00-13:00', employeeMsg: 120, customerMsg: 98 },
+                { date: '13:00-14:00', employeeMsg: 88, customerMsg: 72 },
+                { date: '14:00-15:00', employeeMsg: 165, customerMsg: 138 },
+                { date: '15:00-16:00', employeeMsg: 182, customerMsg: 150 },
+                { date: '16:00-17:00', employeeMsg: 175, customerMsg: 142 },
+                { date: '17:00-18:00', employeeMsg: 158, customerMsg: 128 },
+                { date: '18:00-19:00', employeeMsg: 92, customerMsg: 75 }
+            ];
+
+            const currentChartData = chartDimension === 'day' ? chartDataByDay : chartDataByHour;
+
+            // 敏感词统计数据（模拟）
+            const sensitiveWordData = [
+                { name: '竞品对比', value: 45 },
+                { name: '低价出售', value: 32 },
+                { name: '回扣', value: 28 },
+                { name: '提成', value: 22 },
+                { name: '私单', value: 18 },
+                { name: '跳槽', value: 15 },
+                { name: '投诉', value: 12 },
+                { name: '其他', value: 8 }
+            ];
+
+            // 敏感行为统计数据（模拟）
+            const sensitiveBehaviorData = [
+                { name: '员工删除客户', value: 35 },
+                { name: '员工撤回消息', value: 28 },
+                { name: '员工发送文件', value: 22 },
+                { name: '员工发送红包', value: 15 },
+                { name: '员工接收红包', value: 10 }
+            ];
+
+            // 初始化ECharts
+            useEffect(() => {
+                const chartDom = document.getElementById('stackedBarChart');
+                if (chartDom) {
+                    const myChart = echarts.init(chartDom);
+
+                    const option = {
+                        tooltip: {
+                            trigger: 'axis',
+                            axisPointer: {
+                                type: 'shadow'
+                            },
+                            formatter: function (params) {
+                                let total = 0;
+                                let tooltipHtml = `<div style="font-weight:500;margin-bottom:4px">${params[0].axisValue}</div>`;
+                                params.forEach(param => {
+                                    total += param.value;
+                                    tooltipHtml += `<div style="display:flex;align-items:center;gap:4px">
+                                        <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${param.color}"></span>
+                                        <span style="color:#8c8c8c">${param.seriesName}:</span>
+                                        <span style="font-weight:500">${param.value}</span>
+                                    </div>`;
+                                });
+                                tooltipHtml += `<div style="margin-top:4px;border-top:1px solid #f0f0f0;padding-top:4px">
+                                    <span style="color:#8c8c8c">消息总数:</span>
+                                    <span style="font-weight:500">${total}</span>
+                                </div>`;
+                                return tooltipHtml;
+                            }
+                        },
+                        legend: {
+                            data: ['员工发送消息', '客户发送消息'],
+                            right: 0,
+                            top: 0,
+                            itemWidth: 12,
+                            itemHeight: 12,
+                            textStyle: {
+                                color: '#8c8c8c',
+                                fontSize: 12
+                            }
+                        },
+                        grid: {
+                            left: '3%',
+                            right: '4%',
+                            bottom: '3%',
+                            top: '15%',
+                            containLabel: true
+                        },
+                        xAxis: {
+                            type: 'category',
+                            data: currentChartData.map(item => item.date),
+                            axisLine: {
+                                lineStyle: {
+                                    color: '#e8e8e8'
+                                }
+                            },
+                            axisLabel: {
+                                color: '#8c8c8c',
+                                fontSize: 12
+                            }
+                        },
+                        yAxis: {
+                            type: 'value',
+                            axisLine: {
+                                show: false
+                            },
+                            axisLabel: {
+                                color: '#8c8c8c',
+                                fontSize: 12
+                            },
+                            splitLine: {
+                                lineStyle: {
+                                    color: '#f0f0f0'
+                                }
+                            }
+                        },
+                        series: [
+                            {
+                                name: '员工发送消息',
+                                type: 'bar',
+                                stack: 'total',
+                                data: currentChartData.map(item => item.employeeMsg),
+                                itemStyle: {
+                                    color: '#1890ff',
+                                    borderRadius: [0, 0, 0, 0]
+                                },
+                                barWidth: '40%',
+                                barGap: '0%'
+                            },
+                            {
+                                name: '客户发送消息',
+                                type: 'bar',
+                                stack: 'total',
+                                data: currentChartData.map(item => item.customerMsg),
+                                itemStyle: {
+                                    color: '#52c41a',
+                                    borderRadius: [2, 2, 0, 0]
+                                },
+                                barWidth: '40%',
+                                barGap: '0%'
+                            }
+                        ]
+                    };
+
+                    myChart.setOption(option);
+
+                    // 响应窗口大小变化
+                    const resizeHandler = () => {
+                        myChart.resize();
+                    };
+                    window.addEventListener('resize', resizeHandler);
+
+                    return () => {
+                        window.removeEventListener('resize', resizeHandler);
+                        myChart.dispose();
+                    };
+                }
+            }, [chartDimension, currentChartData]);
+
+            // 初始化敏感词统计环形图
+            useEffect(() => {
+                const chartDom = document.getElementById('sensitiveWordChart');
+                if (chartDom) {
+                    const myChart = echarts.init(chartDom);
+
+                    const totalCount = sensitiveWordData.reduce((sum, item) => sum + item.value, 0);
+
+                    const option = {
+                        tooltip: {
+                            trigger: 'item',
+                            backgroundColor: 'rgba(255,255,255,0.95)',
+                            borderColor: '#f0f0f0',
+                            borderWidth: 1,
+                            textStyle: {
+                                color: '#333'
+                            },
+                            formatter: function (params) {
+                                return `<div style="font-weight:500;margin-bottom:4px">${params.name}</div>
+                                    <div>触发次数: <span style="font-weight:500">${params.value}</span></div>
+                                    <div>占比: <span style="font-weight:500">${params.percent}%</span></div>`;
+                            }
+                        },
+                        legend: {
+                            orient: 'vertical',
+                            right: '5%',
+                            top: 'center',
+                            itemWidth: 12,
+                            itemHeight: 12,
+                            textStyle: {
+                                color: '#8c8c8c',
+                                fontSize: 12
+                            },
+                            formatter: function (name) {
+                                const item = sensitiveWordData.find(d => d.name === name);
+                                const percent = totalCount > 0 ? ((item ? item.value : 0) / totalCount * 100).toFixed(1) : 0;
+                                return `${name}  ${item ? item.value : 0} (${percent}%)`;
+                            }
+                        },
+                        // 使用graphic在环形图中间显示总数
+                        graphic: [
+                            {
+                                type: 'group',
+                                left: '35%',
+                                top: 'center',
+                                children: [
+                                    {
+                                        type: 'text',
+                                        style: {
+                                            text: totalCount.toString(),
+                                            textAlign: 'center',
+                                            fill: '#262626',
+                                            fontSize: 28,
+                                            fontWeight: 600
+                                        },
+                                        left: 'center',
+                                        top: 'center'
+                                    },
+                                    {
+                                        type: 'text',
+                                        style: {
+                                            text: '总次数',
+                                            textAlign: 'center',
+                                            fill: '#8c8c8c',
+                                            fontSize: 12
+                                        },
+                                        left: 'center',
+                                        top: 36
+                                    }
+                                ]
+                            }
+                        ],
+                        series: [
+                            {
+                                name: '敏感词触发次数',
+                                type: 'pie',
+                                radius: ['45%', '70%'],
+                                center: ['35%', '50%'],
+                                avoidLabelOverlap: false,
+                                itemStyle: {
+                                    borderRadius: 4,
+                                    borderColor: '#fff',
+                                    borderWidth: 2
+                                },
+                                // 显示数据标签
+                                label: {
+                                    show: true,
+                                    position: 'outside',
+                                    formatter: function (params) {
+                                        return `{name|${params.name}}\n{value|${params.value}次} {percent|(${params.percent}%)}`;
+                                    },
+                                    rich: {
+                                        name: {
+                                            fontSize: 11,
+                                            color: '#595959',
+                                            lineHeight: 16
+                                        },
+                                        value: {
+                                            fontSize: 11,
+                                            color: '#262626',
+                                            fontWeight: 500,
+                                            lineHeight: 16
+                                        },
+                                        percent: {
+                                            fontSize: 10,
+                                            color: '#8c8c8c',
+                                            lineHeight: 16
+                                        }
+                                    }
+                                },
+                                labelLine: {
+                                    show: true,
+                                    length: 10,
+                                    length2: 15,
+                                    lineStyle: {
+                                        color: '#d9d9d9'
+                                    }
+                                },
+                                emphasis: {
+                                    label: {
+                                        show: true,
+                                        fontSize: 14,
+                                        fontWeight: 'bold'
+                                    }
+                                },
+                                data: sensitiveWordData.map((item, index) => ({
+                                    value: item.value,
+                                    name: item.name,
+                                    itemStyle: {
+                                        color: ['#1890ff', '#52c41a', '#faad14', '#f5222d', '#722ed1', '#13c2c2', '#eb2f96', '#8c8c8c'][index]
+                                    }
+                                }))
+                            }
+                        ]
+                    };
+
+                    myChart.setOption(option);
+
+                    const resizeHandler = () => {
+                        myChart.resize();
+                    };
+                    window.addEventListener('resize', resizeHandler);
+
+                    return () => {
+                        window.removeEventListener('resize', resizeHandler);
+                        myChart.dispose();
+                    };
+                }
+            }, [sensitiveWordData]);
+
+            // 初始化敏感行为统计环形图
+            useEffect(() => {
+                const chartDom = document.getElementById('sensitiveBehaviorChart');
+                if (chartDom) {
+                    const myChart = echarts.init(chartDom);
+
+                    const totalCount = sensitiveBehaviorData.reduce((sum, item) => sum + item.value, 0);
+
+                    const option = {
+                        tooltip: {
+                            trigger: 'item',
+                            backgroundColor: 'rgba(255,255,255,0.95)',
+                            borderColor: '#f0f0f0',
+                            borderWidth: 1,
+                            textStyle: {
+                                color: '#333'
+                            },
+                            formatter: function (params) {
+                                return `<div style="font-weight:500;margin-bottom:4px">${params.name}</div>
+                                    <div>触发次数: <span style="font-weight:500">${params.value}</span></div>
+                                    <div>占比: <span style="font-weight:500">${params.percent}%</span></div>`;
+                            }
+                        },
+                        legend: {
+                            orient: 'vertical',
+                            right: '5%',
+                            top: 'center',
+                            itemWidth: 12,
+                            itemHeight: 12,
+                            textStyle: {
+                                color: '#8c8c8c',
+                                fontSize: 12
+                            },
+                            formatter: function (name) {
+                                const item = sensitiveBehaviorData.find(d => d.name === name);
+                                const percent = totalCount > 0 ? ((item ? item.value : 0) / totalCount * 100).toFixed(1) : 0;
+                                return `${name}  ${item ? item.value : 0} (${percent}%)`;
+                            }
+                        },
+                        // 使用graphic在环形图中间显示总数
+                        graphic: [
+                            {
+                                type: 'group',
+                                left: '35%',
+                                top: 'center',
+                                children: [
+                                    {
+                                        type: 'text',
+                                        style: {
+                                            text: totalCount.toString(),
+                                            textAlign: 'center',
+                                            fill: '#262626',
+                                            fontSize: 28,
+                                            fontWeight: 600
+                                        },
+                                        left: 'center',
+                                        top: 'center'
+                                    },
+                                    {
+                                        type: 'text',
+                                        style: {
+                                            text: '总次数',
+                                            textAlign: 'center',
+                                            fill: '#8c8c8c',
+                                            fontSize: 12
+                                        },
+                                        left: 'center',
+                                        top: 36
+                                    }
+                                ]
+                            }
+                        ],
+                        series: [
+                            {
+                                name: '敏感行为触发次数',
+                                type: 'pie',
+                                radius: ['45%', '70%'],
+                                center: ['35%', '50%'],
+                                avoidLabelOverlap: false,
+                                itemStyle: {
+                                    borderRadius: 4,
+                                    borderColor: '#fff',
+                                    borderWidth: 2
+                                },
+                                // 显示数据标签
+                                label: {
+                                    show: true,
+                                    position: 'outside',
+                                    formatter: function (params) {
+                                        return `{name|${params.name}}\n{value|${params.value}次} {percent|(${params.percent}%)}`;
+                                    },
+                                    rich: {
+                                        name: {
+                                            fontSize: 11,
+                                            color: '#595959',
+                                            lineHeight: 16
+                                        },
+                                        value: {
+                                            fontSize: 11,
+                                            color: '#262626',
+                                            fontWeight: 500,
+                                            lineHeight: 16
+                                        },
+                                        percent: {
+                                            fontSize: 10,
+                                            color: '#8c8c8c',
+                                            lineHeight: 16
+                                        }
+                                    }
+                                },
+                                labelLine: {
+                                    show: true,
+                                    length: 10,
+                                    length2: 15,
+                                    lineStyle: {
+                                        color: '#d9d9d9'
+                                    }
+                                },
+                                emphasis: {
+                                    label: {
+                                        show: true,
+                                        fontSize: 14,
+                                        fontWeight: 'bold'
+                                    }
+                                },
+                                data: sensitiveBehaviorData.map((item, index) => ({
+                                    value: item.value,
+                                    name: item.name,
+                                    itemStyle: {
+                                        color: ['#f5222d', '#faad14', '#1890ff', '#52c41a', '#722ed1'][index]
+                                    }
+                                }))
+                            }
+                        ]
+                    };
+
+                    myChart.setOption(option);
+
+                    const resizeHandler = () => {
+                        myChart.resize();
+                    };
+                    window.addEventListener('resize', resizeHandler);
+
+                    return () => {
+                        window.removeEventListener('resize', resizeHandler);
+                        myChart.dispose();
+                    };
+                }
+            }, [sensitiveBehaviorData]);
+
+            return (
+                <div className="content-card" style={{ height: 'calc(100vh - 40px)', overflow: 'auto' }}>
+                    {/* 固定标题栏 */}
+                    <div style={{
+                        position: 'sticky',
+                        top: 0,
+                        background: '#fff',
+                        zIndex: 10,
+                        padding: '16px 12px 12px',
+                        borderBottom: '1px solid #f0f0f0',
+                        margin: '-8px -12px 16px -12px'
+                    }}>
+                        <h1 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '16px', color: '#262626' }}>
+                            数据统计
+                        </h1>
+
+                        {/* 固定筛选栏 */}
+                        <div className="search-section" style={{ marginBottom: 0, marginTop: 0 }}>
+                            <div className="search-left">
+                                {/* 日期筛选 */}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <span style={{ color: '#666', fontSize: '14px', whiteSpace: 'nowrap' }}>日期：</span>
+                                    <RangePicker
+                                        value={dateRange}
+                                        onChange={(dates) => setDateRange(dates)}
+                                        placeholder={['开始日期', '结束日期']}
+                                        style={{ width: 240 }}
+                                    />
+                                </div>
+                                {/* 员工筛选 */}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <span style={{ color: '#666', fontSize: '14px', whiteSpace: 'nowrap' }}>员工：</span>
+                                    <TreeSelect
+                                        style={{ width: 240 }}
+                                        value={selectedEmployee}
+                                        onChange={(value) => setSelectedEmployee(value)}
+                                        placeholder="请选择员工"
+                                        treeData={treeData}
+                                        allowClear
+                                        treeDefaultExpandAll
+                                        showCheckedStrategy={TreeSelect.SHOW_CHILD}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* 指标卡片区域 */}
+                    <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(4, 1fr)',
+                        gap: '16px',
+                        marginTop: '0'
+                    }}>
+                        {indicatorCards.map((card) => (
+                            <div
+                                key={card.key}
+                                style={{
+                                    background: '#fff',
+                                    borderRadius: '8px',
+                                    padding: '20px 24px',
+                                    boxShadow: '0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.06)',
+                                    border: '1px solid #f0f0f0'
+                                }}
+                            >
+                                <div style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    marginBottom: '12px'
+                                }}>
+                                    <span style={{
+                                        color: '#8c8c8c',
+                                        fontSize: '14px',
+                                        fontWeight: 400
+                                    }}>
+                                        {card.label}
+                                    </span>
+                                    <Popover
+                                        content={<div style={{ maxWidth: 280, fontSize: 13, lineHeight: 1.6, color: '#fff' }}>{indicatorTooltips[card.key]}</div>}
+                                        title={null}
+                                        trigger="hover"
+                                        overlayStyle={{ maxWidth: 300 }}
+                                        overlayInnerStyle={{ background: 'rgba(0,0,0,0.85)', borderRadius: 6, padding: '8px 12px' }}
+                                    >
+                                        <span
+                                            style={{
+                                                display: 'inline-flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                width: '16px',
+                                                height: '16px',
+                                                borderRadius: '50%',
+                                                background: '#f0f0f0',
+                                                color: '#8c8c8c',
+                                                fontSize: '12px',
+                                                cursor: 'pointer',
+                                                lineHeight: 1,
+                                                marginLeft: '4px'
+                                            }}
+                                        >
+                                            ?
+                                        </span>
+                                    </Popover>
+                                </div>
+                                <div style={{
+                                    fontSize: '28px',
+                                    fontWeight: 600,
+                                    color: '#262626',
+                                    lineHeight: 1.2
+                                }}>
+                                    {card.value}<span style={{ fontSize: '16px', fontWeight: 400, marginLeft: '4px' }}>{card.unit}</span>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* 图表区域 - 堆积柱状图 */}
+                    <div style={{
+                        marginTop: '24px',
+                        background: '#fff',
+                        borderRadius: '8px',
+                        padding: '24px',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.06)',
+                        border: '1px solid #f0f0f0',
+                        minHeight: '400px',
+                        position: 'relative'
+                    }}>
+                        {/* 图表标题和维度切换 */}
+                        <div style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            marginBottom: '16px'
+                        }}>
+                            <div style={{ fontSize: '16px', fontWeight: 500, color: '#262626' }}>
+                                会话消息统计
+                            </div>
+                            {/* 维度切换按钮 */}
+                            <div style={{
+                                display: 'flex',
+                                gap: '4px',
+                                background: '#f5f5f5',
+                                padding: '2px',
+                                borderRadius: '4px'
+                            }}>
+                                <span
+                                    onClick={() => setChartDimension('day')}
+                                    style={{
+                                        padding: '4px 12px',
+                                        fontSize: '12px',
+                                        cursor: 'pointer',
+                                        borderRadius: '3px',
+                                        background: chartDimension === 'day' ? '#fff' : 'transparent',
+                                        color: chartDimension === 'day' ? '#1890ff' : '#8c8c8c',
+                                        fontWeight: chartDimension === 'day' ? 500 : 400,
+                                        boxShadow: chartDimension === 'day' ? '0 1px 2px rgba(0,0,0,0.1)' : 'none',
+                                        transition: 'all 0.2s'
+                                    }}
+                                >
+                                    天
+                                </span>
+                                <span
+                                    onClick={() => setChartDimension('hour')}
+                                    style={{
+                                        padding: '4px 12px',
+                                        fontSize: '12px',
+                                        cursor: 'pointer',
+                                        borderRadius: '3px',
+                                        background: chartDimension === 'hour' ? '#fff' : 'transparent',
+                                        color: chartDimension === 'hour' ? '#1890ff' : '#8c8c8c',
+                                        fontWeight: chartDimension === 'hour' ? 500 : 400,
+                                        boxShadow: chartDimension === 'hour' ? '0 1px 2px rgba(0,0,0,0.1)' : 'none',
+                                        transition: 'all 0.2s'
+                                    }}
+                                >
+                                    小时
+                                </span>
+                            </div>
+                        </div>
+                        {/* ECharts图表容器 */}
+                        <div id="stackedBarChart" style={{ width: '100%', height: '350px' }}></div>
+                    </div>
+
+                    {/* 第三栏图表 - 敏感词统计和敏感行为统计并排 */}
+                    <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(2, 1fr)',
+                        gap: '24px',
+                        marginTop: '24px'
+                    }}>
+                        {/* 敏感词统计 - 环形图 */}
+                        <div style={{
+                            background: '#fff',
+                            borderRadius: '8px',
+                            padding: '24px',
+                            boxShadow: '0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.06)',
+                            border: '1px solid #f0f0f0',
+                            minHeight: '400px'
+                        }}>
+                            <div style={{ fontSize: '16px', fontWeight: 500, color: '#262626', marginBottom: '16px' }}>
+                                敏感词统计
+                            </div>
+                            <div id="sensitiveWordChart" style={{ width: '100%', height: '320px' }}></div>
+                        </div>
+
+                        {/* 敏感行为统计 - 环形图 */}
+                        <div style={{
+                            background: '#fff',
+                            borderRadius: '8px',
+                            padding: '24px',
+                            boxShadow: '0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.06)',
+                            border: '1px solid #f0f0f0',
+                            minHeight: '400px'
+                        }}>
+                            <div style={{ fontSize: '16px', fontWeight: 500, color: '#262626', marginBottom: '16px' }}>
+                                敏感行为统计
+                            </div>
+                            <div id="sensitiveBehaviorChart" style={{ width: '100%', height: '320px' }}></div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
         // 工作台组件
         const Workbench = () => {
             const stats = [
@@ -9367,6 +10126,7 @@
             const [searchKeyword, setSearchKeyword] = useState('');
             const [dateRange, setDateRange] = useState(null);
             const [auditStatus, setAuditStatus] = useState('all');
+            const [employeeFilter, setEmployeeFilter] = useState('all'); // 员工筛选
             const [behaviorFilter, setBehaviorFilter] = useState('全部'); // 敏感行为筛选
             const [detailDrawerVisible, setDetailDrawerVisible] = useState(false);
             const [selectedRecord, setSelectedRecord] = useState(null);
@@ -9640,6 +10400,11 @@
                         const itemDate = new Date(item.sendTime.replace(/\//g, '-'));
                         return itemDate >= start.startOf('day').toDate() && itemDate <= end.endOf('day').toDate();
                     });
+                }
+
+                // 员工筛选
+                if (employeeFilter && employeeFilter !== 'all') {
+                    data = data.filter(item => item.employeeName === employeeFilter);
                 }
                 
                 return data;
@@ -10013,12 +10778,12 @@
                 }}>
                     {/* 固定顶部区域：标题和 Tab */}
                     <div style={{ 
-                        padding: '16px 12px 12px',
+                        padding: '8px 12px 8px',
                         backgroundColor: '#fff',
                         borderBottom: '1px solid #f0f0f0',
                         flexShrink: 0
                     }}>
-                        <h1 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '16px', color: '#262626', margin: 0 }}>
+                        <h1 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '8px', color: '#262626', margin: 0 }}>
                             会话风险记录
                         </h1>
             
@@ -10076,6 +10841,23 @@
                                     format="YYYY/MM/DD"
                                     placeholder={['开始时间', '结束时间']}
                                 />
+                                <span style={{ color: '#666', fontSize: '14px', marginRight: '8px' }}>{activeTab === 'sensitive_word' ? '员工:' : '触发人:'}</span>
+                                <Select
+                                    value={employeeFilter}
+                                    onChange={setEmployeeFilter}
+                                    style={{ width: 140 }}
+                                    allowClear
+                                    placeholder="请选择员工"
+                                >
+                                    <Option value="all">全部</Option>
+                                    <Option value="李想">李想</Option>
+                                    <Option value="王伟军">王伟军</Option>
+                                    <Option value="毛奇">毛奇</Option>
+                                    <Option value="谢丽">谢丽</Option>
+                                    <Option value="周杰">周杰</Option>
+                                    <Option value="王晨">王晨</Option>
+                                    <Option value="王鸿码">王鸿码</Option>
+                                </Select>
                                 <span style={{ color: '#666', fontSize: '14px', marginRight: '8px' }}>审核结果:</span>
                                 <Select
                                     value={auditStatus}
@@ -10089,15 +10871,6 @@
                                 </Select>
                             </div>
                         </div>
-                    </div>
-            
-                    {/* 表格操作按钮 */}
-                    <div style={{ 
-                        padding: '6px 12px',
-                        backgroundColor: '#fff',
-                        borderBottom: '1px solid #f0f0f0',
-                        flexShrink: 0
-                    }}>
                     </div>
             
                     {/* 可滚动列表区域 */}
@@ -18298,6 +19071,8 @@
                                     <SilenceReminderRecords setSelectedKeys={setSelectedKeys} />
                                 ) : selectedKeys.includes('silence_reminder_settings') ? (
                                     <SilenceReminderSettings />
+                                ) : selectedKeys.includes('data_statistics') ? (
+                                    <DataStatistics />
                                 ) : selectedKeys.includes('my_leads') ? (
                                     <MyLeads />
                                 ) : selectedKeys.includes('call_records') ? (
